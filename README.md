@@ -9,10 +9,13 @@ Florin Ciprian Argatu · 2026–2027.
 | Lucrare | Aplicație HTML | Îndrumar |
 |---|---|---|
 | L01 — Primii pași cu ESP32 | [Deschide aplicația](L01/SMMeH_L01_ESP32.html) | [Word](L01/SMMeH_L01_Indrumar_v1.0.docx) |
+| Curs 5 — Comunicația între noduri IoT prin HTTP (laborator virtual) | [Deschide aplicația](C05/SMMeH_C05_Comunicatie_ESP32.html) | — (suport de curs în Moodle) |
 
 **[Deschide Virtual Laboratory](https://argatuflorin.github.io/SMMeH/)**
 
 [L01 — aplicație funcțională](https://argatuflorin.github.io/SMMeH/L01/SMMeH_L01_ESP32.html)
+
+[Curs 5 — laborator virtual Comunicație ESP32](https://argatuflorin.github.io/SMMeH/C05/SMMeH_C05_Comunicatie_ESP32.html) · generator SMMeH-HTTP-1.0, puls simulat, adaptat după CDM_Comunicatie_ESP32.html
 
 Pagina de intrare este `index.html`. Publicarea GitHub Pages a reușit; pagina de intrare a fost verificată prin HTTP.
 
