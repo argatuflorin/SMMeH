@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMMeH · L03 · Componente de circuit</title>
+<style>
+:root {
+  --ink: #111;
+  --muted: #4b5563;
+  --petrol: #0f766e;
+  --petrol-dark: #115e59;
+  --mint: #ddf3eb;
+  --pale: #f3faf8;
+  --line: #b8d5ce;
+  --blue: #2563a6;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --err: #a32121;
+  --err-bg: #fdecec;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--pale); color: var(--ink); font: 16px/1.6 system-ui, "Segoe UI", Arial, sans-serif; }
+main { max-width: 1180px; margin: auto; padding: 24px 24px 70px; }
+header { padding: 26px 0 18px; border-bottom: 3px solid var(--petrol); }
+.kicker { font-weight: 700; font-size: 14px; color: var(--petrol-dark); }
+h1 { font-size: clamp(30px, 4vw, 46px); line-height: 1.12; margin: 10px 0 12px; max-width: 900px; }
+h2 { font-size: 26px; line-height: 1.2; margin: 0 0 16px; }
+h3 { font-size: 19px; margin: 18px 0 8px; }
+.lead { font-size: 19px; max-width: 860px; margin: 0 0 8px; }
+.small { font-size: 14px; color: var(--muted); }
+.note { background: var(--mint); padding: 13px 16px; border-radius: 10px; }
+.warn { background: var(--warn-bg); color: #3b2306; padding: 12px 16px; border-radius: 10px; }
+.ok { color: #14603d; font-weight: 650; }
+.error { color: var(--err); font-weight: 650; }
+
+/* varianta */
+.variant { background: white; border: 2px solid var(--petrol); border-radius: 14px; padding: 18px 20px; margin: 20px 0; }
+.variant h2 { font-size: 21px; margin-bottom: 10px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.row label { min-width: 150px; }
+.data { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.datum { background: var(--pale); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 14px; }
+.datum b { display: block; font-size: 17px; }
+
+/* file */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 0; }
+.tabs button { background: white; border: 1px solid var(--line); border-bottom: 0; border-radius: 9px 9px 0 0; padding: 11px 16px; font-weight: 650; }
+.tabs button[aria-selected="true"] { background: var(--petrol); color: white; border-color: var(--petrol); }
+.panel { background: white; border: 1px solid var(--line); border-radius: 0 12px 12px 12px; padding: 24px; }
+.panel[hidden] { display: none; }
+
+/* experimente */
+.exps { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.exps button[aria-pressed="true"] { background: var(--petrol); color: white; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+label { display: block; font-size: 14px; font-weight: 650; }
+input, select, textarea { display: block; width: 100%; font: inherit; padding: 8px 9px; border: 1px solid #8eaaa4; border-radius: 6px; background: white; color: var(--ink); margin-top: 3px; }
+input[type="range"] { padding: 0; }
+input[type="checkbox"] { display: inline; width: auto; margin: 0 6px 0 0; }
+textarea { min-height: 90px; }
+button { font: 650 14px system-ui, Arial, sans-serif; padding: 10px 14px; border: 1px solid var(--petrol); border-radius: 7px; background: var(--mint); color: var(--ink); cursor: pointer; }
+button.primary { background: var(--petrol); color: white; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.buttons { display: flex; gap: 9px; flex-wrap: wrap; margin: 14px 0; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.metric { padding: 11px 12px; background: var(--pale); border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+.metric b { display: block; font-size: 21px; }
+.figure { background: var(--pale); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.figure svg { display: block; width: 100%; height: auto; }
+canvas { display: block; width: 100%; height: 270px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+.formula { text-align: center; font: 19px/1.7 Georgia, "Times New Roman", serif; margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; }
+td, th { padding: 7px 9px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--mint); }
+.overflow { overflow-x: auto; }
+details { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; margin: 10px 0; background: white; }
+summary { font-weight: 650; cursor: pointer; }
+.answers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mark { font-size: 13px; margin-top: 3px; min-height: 18px; }
+footer { font-size: 13px; color: var(--muted); margin-top: 28px; }
+.printonly { display: none; }
+
+@media (max-width: 700px) {
+  main { padding: 14px; }
+  .panel { padding: 16px; }
+  .grid, .controls, .answers { grid-template-columns: 1fr; }
+  .data, .metrics { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}
+@media print {
+  body { background: white; font: 11pt/1.35 Georgia, serif; }
+  main { padding: 0; max-width: none; }
+  .noprint, .tabs, .exps, .buttons, #sheetStatus, .mark:empty { display: none !important; }
+  input, textarea { border: 0; border-bottom: 1px solid #888; border-radius: 0; }
+  .panel { border: 0; padding: 0; }
+  .panel[hidden] { display: none !important; }
+  #p3 { display: block !important; }
+  #p1, #p2, #p4 { display: none !important; }
+  .printonly { display: block; }
+  table, .datum { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">SMMeH · L03 · Masterat TIMM · 2026–2027 · versiunea 1.0 · însoțește cursul C02</div>
+  <h1>Componente de circuit: calculează, apoi verifică</h1>
+  <p class="lead noprint">Laborator virtual pentru rezistor, LED, divizor, condensator și buton. Calculezi valorile pentru varianta ta N, le verifici în bancul virtual și le notezi în fișă.</p>
+  <p class="small">Sisteme de măsurare și monitorizare e-health · Florin Ciprian Argatu</p>
+  <p class="note noprint"><b>Simulator didactic.</b> Pagina calculează modele ideale. Nu se conectează la placa ESP32 și nu înlocuiește măsurarea cu multimetrul. Curba LED-ului și termistorul folosesc modele ilustrative.</p>
+</header>
+
+<section class="variant" aria-labelledby="vTitle">
+  <h2 id="vTitle">Varianta individuală</h2>
+  <div class="row noprint">
+    <label>Indice N (1–42)<input id="nIn" type="number" min="1" max="42" step="1" value="7"></label>
+    <label>Grupa / seria<input id="groupIn" maxlength="24" value="SMMeH"></label>
+    <button id="applyN" class="primary">Aplică varianta N</button>
+    <button id="exampleN">Exemplul N = 7</button>
+    <label>Cod variantă<input id="codeOut" readonly></label>
+  </div>
+  <p id="nStatus" role="status" class="error noprint"></p>
+  <div class="data" id="dataOut"></div>
+</section>
+
+<div class="tabs" role="tablist" aria-label="Secțiunile aplicației">
+  <button role="tab" id="t1" aria-controls="p1" aria-selected="true">1 · Începe aici</button>
+  <button role="tab" id="t2" aria-controls="p2" aria-selected="false">2 · Banc virtual</button>
+  <button role="tab" id="t3" aria-controls="p3" aria-selected="false">3 · Fișa studentului</button>
+  <button role="tab" id="t4" aria-controls="p4" aria-selected="false">4 · Breviar</button>
+</div>
+
+<!-- ============ 1 · INCEPE AICI ============ -->
+<section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+  <h2>Ce investighezi</h2>
+  <div class="grid">
+    <div>
+      <p>Montajul din L01 (LED cu rezistor pe GPIO18, buton cu INPUT_PULLUP, DHT22) folosește câteva componente simple. Aici calculezi valorile lor pentru varianta ta și vezi ce se schimbă când modifici un parametru.</p>
+      <h3>Parcurs propus (≈ 60 de minute)</h3>
+      <ol>
+        <li>Aplică varianta N. Notează datele impuse.</li>
+        <li>Calculează pe hârtie mărimile din fișă (fila 3), fără bancul virtual.</li>
+        <li>În fila 2, parcurge experimentele A–E și compară cu calculul.</li>
+        <li>Notează în fișă cel puțin un caz pentru fiecare experiment.</li>
+        <li>Verifică răspunsurile, scrie concluziile, tipărește fișa sau salvează PDF.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Ce predai</h3>
+      <p>Fișa tipărită (PDF) cu N, calculele cu unități, cazurile notate și trei concluzii. Numele fișierului: <code>SMMeH_L03_Nxx_Nume_Prenume.pdf</code>.</p>
+      <h3>Ipotezele modelului</h3>
+      <ul>
+        <li>Surse ideale; tensiunea pinului GPIO este 3,3 V în starea HIGH.</li>
+        <li>LED: tensiune directă U<sub>F</sub> constantă pentru calculul curentului.</li>
+        <li>Termistor NTC 10 kΩ, B = 3950 K (model, nu o fișă anume).</li>
+        <li>Rebondul butonului este un tipar fix, ales pentru demonstrație.</li>
+      </ul>
+      <p class="warn">Montajele didactice nu se conectează la pacienți și nu se folosesc pentru decizii medicale.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 · BANC VIRTUAL ============ -->
+<section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+  <div class="exps" role="group" aria-label="Experimente">
+    <button data-exp="A" aria-pressed="true">A · LED și rezistor</button>
+    <button data-exp="B" aria-pressed="false">B · Divizor și sarcină</button>
+    <button data-exp="C" aria-pressed="false">C · Încărcarea RC și filtrul</button>
+    <button data-exp="D" aria-pressed="false">D · Buton, pull-up, rebond</button>
+    <button data-exp="E" aria-pressed="false">E · Codul culorilor</button>
+  </div>
+
+  <!-- A -->
+  <div id="expA" class="exp">
+    <h2>A · Curentul unui LED limitat de rezistor</h2>
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <label>Tensiunea sursei<select id="aU"><option value="3.3">3,3 V (GPIO)</option><option value="5">5 V (prin tranzistor)</option></select></label>
+          <label>LED (U<sub>F</sub> presupus)<select id="aLed"></select></label>
+          <label>Rezistor R<select id="aR"></select></label>
+        </div>
+        <div class="metrics">
+          <div class="metric">U<sub>R</sub><b id="aUR">—</b></div>
+          <div class="metric">I<sub>LED</sub><b id="aI">—</b></div>
+          <div class="metric">P pe rezistor<b id="aP">—</b></div>
+          <div class="metric">Starea<b id="aState">—</b></div>
+        </div>
+        <p id="aMsg" class="small"></p>
+        <div class="buttons"><button id="aNote">Notează cazul în fișă</button></div>
+      </div>
+      <div class="figure">
+        <svg viewBox="0 0 520 210" role="img" aria-label="Schema: sursă, rezistor și LED în serie, înapoi la masă">
+          <path d="M70 92 V40 H150 M250 40 H330 M362 40 H460 V175 H70 V108" fill="none" stroke="#0f766e" stroke-width="3"/>
+          <path d="M52 92 H88 M60 108 H80" stroke="#111" stroke-width="3"/>
+          <text x="96" y="100" font-size="13">+</text>
+          <text x="14" y="104" font-size="15" id="aSvgU">3,3 V</text>
+          <path d="M150 40 l8 -10 l12 20 l12 -20 l12 20 l12 -20 l12 20 l12 -20 l8 10" fill="none" stroke="#111" stroke-width="2.5"/>
+          <text x="160" y="72" font-size="15" id="aSvgR">R</text>
+          <circle id="aGlow" cx="346" cy="40" r="30" fill="#fbbf24" opacity="0"/>
+          <path d="M332 24 v32 l28 -16 z" fill="white" stroke="#111" stroke-width="2.5"/>
+          <path d="M362 24 v32" stroke="#111" stroke-width="2.5"/>
+          <path d="M350 14 l10 -10 M360 18 l10 -10" stroke="#111" stroke-width="1.6"/>
+          <text x="318" y="84" font-size="14">LED (A → K)</text>
+          <text x="236" y="198" font-size="14">GND comun</text>
+          <text x="300" y="130" font-size="13" fill="#4b5563">U = U_R + U_F (Kirchhoff)</text>
+          <text x="300" y="150" font-size="13" fill="#4b5563">același curent I prin R și LED</text>
+        </svg>
+        <canvas id="aChart" aria-label="Curentul LED-ului în funcție de R"></canvas>
+        <p class="small">Curba: I = (U − U<sub>F</sub>) / R pentru valorile E12 de la 100 Ω la 10 kΩ. Punctul marcat este alegerea curentă.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div id="expB" class="exp" hidden>
+    <h2>B · Divizorul de tensiune și efectul sarcinii</h2>
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <label>Mod<select id="bMode"><option value="div">Divizor R1–R2</option><option value="ntc">Divizor cu NTC</option></select></label>
+          <label>U<sub>in</sub> [V]<input id="bUin" type="number" min="0.1" max="12" step="0.1" value="3.3"></label>
+          <label id="bR1L">R1 [kΩ]<input id="bR1" type="number" min="0.1" max="1000" step="0.1"></label>
+          <label id="bR2L">R2 [kΩ]<input id="bR2" type="number" min="0.1" max="1000" step="0.1"></label>
+          <label id="bRLL">R<sub>L</sub> [kΩ]<input id="bRL" type="number" min="0.1" max="10000" step="0.1"></label>
+          <label id="bNoLoadL"><input id="bNoLoad" type="checkbox"> Fără sarcină</label>
+          <label id="bTL" hidden>Temperatura [°C]<input id="bT" type="range" min="20" max="45" step="0.5" value="37"></label>
+          <label id="bRfL" hidden>R<sub>fix</sub> [kΩ]<select id="bRf"></select></label>
+        </div>
+        <div class="metrics">
+          <div class="metric"><span id="bL0">U<sub>out</sub> ideal</span><b id="bU0">—</b></div>
+          <div class="metric"><span id="bL1">U<sub>out</sub> cu sarcină</span><b id="bU1">—</b></div>
+          <div class="metric"><span id="bL2">Eroare</span><b id="bErr">—</b></div>
+          <div class="metric"><span id="bL3">Curent prin R1</span><b id="bI">—</b></div>
+        </div>
+        <p id="bMsg" class="small" role="status"></p>
+        <div class="buttons"><button id="bNote">Notează cazul în fișă</button></div>
+      </div>
+      <div class="figure">
+        <canvas id="bChart" aria-label="Graficul divizorului"></canvas>
+        <p id="bChartNote" class="small"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div id="expC" class="exp" hidden>
+    <h2>C · Încărcarea condensatorului și filtrul RC</h2>
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <label>R [kΩ]<select id="cR"></select></label>
+          <label>C<select id="cC"></select></label>
+          <label>Viteza de redare<select id="cSpeed"><option value="0.25">lent</option><option value="1" selected>normal</option><option value="3">rapid</option></select></label>
+        </div>
+        <div class="buttons">
+          <button id="cPlay" class="primary">Pornește</button>
+          <button id="cReset">Resetează timpul</button>
+          <button id="cNote">Notează cazul în fișă</button>
+        </div>
+        <div class="metrics">
+          <div class="metric">τ = RC<b id="cTau">—</b></div>
+          <div class="metric">f<sub>c</sub><b id="cFc">—</b></div>
+          <div class="metric">t / u<sub>C</sub><b id="cNow">—</b></div>
+          <div class="metric">|H| la 1 Hz / 50 Hz<b id="cH">—</b></div>
+        </div>
+        <p class="small">Animația redă încărcarea pe intervalul 0…5τ în aproximativ 5 secunde (viteza „normal”), indiferent de valoarea reală a lui τ.</p>
+      </div>
+      <div>
+        <canvas id="cChart" aria-label="Tensiunea pe condensator în timp"></canvas>
+        <canvas id="cBode" style="margin-top:12px" aria-label="Amplitudinea relativă a filtrului în funcție de frecvență"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div id="expD" class="exp" hidden>
+    <h2>D · Butonul cu pull-up și rebondul contactelor</h2>
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <label>Pull-up<select id="dPu"></select></label>
+          <label>Filtru RC<select id="dRC"><option value="0">fără filtru</option><option value="100">1 kΩ + 100 nF</option><option value="1000">1 kΩ + 1 µF</option></select></label>
+          <label>Eveniment<select id="dEv"><option value="press">Apăsare</option><option value="release">Eliberare</option></select></label>
+        </div>
+        <div class="buttons"><button id="dRun" class="primary">Simulează evenimentul</button><button id="dNote">Notează cazul în fișă</button></div>
+        <div class="metrics">
+          <div class="metric">Curent pull-up (apăsat)<b id="dI">—</b></div>
+          <div class="metric">Fronturi citite<b id="dEdges">—</b></div>
+          <div class="metric">Nivel final<b id="dFinal">—</b></div>
+          <div class="metric">τ filtru<b id="dTau">—</b></div>
+        </div>
+        <p class="small">Tiparul de rebond este fix (demonstrativ). Pragul de decizie este 1,65 V; zona dintre V<sub>IL</sub> = 0,83 V și V<sub>IH</sub> = 2,48 V este marcată pe grafic ca nedefinită.</p>
+      </div>
+      <div>
+        <canvas id="dChart" aria-label="Tensiunea pe pin după apăsare"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- E -->
+  <div id="expE" class="exp" hidden>
+    <h2>E · Codul culorilor (4 benzi)</h2>
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <label>Banda 1<select id="e1"></select></label>
+          <label>Banda 2<select id="e2"></select></label>
+          <label>Multiplicator<select id="e3"></select></label>
+          <label>Toleranță<select id="e4"><option value="5">auriu ±5 %</option><option value="10">argintiu ±10 %</option><option value="1">maro ±1 %</option></select></label>
+        </div>
+        <div class="buttons"><button id="eMine">Arată rezistorul variantei mele</button><button id="eNote">Notează cazul în fișă</button></div>
+        <div class="metrics">
+          <div class="metric">Valoare<b id="eVal">—</b></div>
+          <div class="metric">Minim<b id="eMin">—</b></div>
+          <div class="metric">Maxim<b id="eMax">—</b></div>
+          <div class="metric">Serie E12<b id="eE12">—</b></div>
+        </div>
+      </div>
+      <div class="figure">
+        <svg viewBox="0 0 520 160" role="img" aria-label="Rezistor cu benzi colorate">
+          <path d="M20 80 H500" stroke="#9ca3af" stroke-width="6"/>
+          <rect x="140" y="40" width="240" height="80" rx="34" fill="#e8d9b5" stroke="#a08b5c" stroke-width="2"/>
+          <rect id="eb1" x="180" y="40" width="20" height="80"/>
+          <rect id="eb2" x="220" y="40" width="20" height="80"/>
+          <rect id="eb3" x="260" y="40" width="20" height="80"/>
+          <rect id="eb4" x="330" y="40" width="20" height="80"/>
+        </svg>
+        <p class="small">Ține banda de toleranță în dreapta. R = (10·c₁ + c₂) · multiplicator.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Cazuri notate</h3>
+  <div class="overflow"><table><thead><tr><th>#</th><th>Experiment</th><th>Parametri</th><th>Rezultat</th></tr></thead><tbody id="caseRows"></tbody></table></div>
+  <div class="buttons"><button id="csvOut">Exportă CSV</button><button id="clearCases">Șterge cazurile</button></div>
+  <p id="caseStatus" role="status" class="small"></p>
+</section>
+
+<!-- ============ 3 · FISA ============ -->
+<section class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+  <h2>Fișa studentului · L03</h2>
+  <p class="printonly" id="printHead"></p>
+  <div class="controls">
+    <label>Nume și prenume<input id="sName" maxlength="80"></label>
+    <label>Grupa<input id="sGroup" maxlength="24"></label>
+    <label>Varianta<input id="sCode" readonly></label>
+  </div>
+  <h3>Date impuse</h3>
+  <div class="overflow"><table id="givenTable"></table></div>
+  <h3>Calculează înainte de verificare</h3>
+  <p class="small">Scrie rezultatul numeric în unitatea cerută (virgula sau punctul sunt acceptate). Verificarea este locală și nu este o notă.</p>
+  <div class="answers" id="answers"></div>
+  <div class="buttons">
+    <button id="checkAns" class="primary">Verifică răspunsurile</button>
+    <button id="printSheet">Tipărește / salvează PDF</button>
+    <button id="exportJSON">Exportă JSON</button>
+    <label class="noprint" style="font-weight:650;align-self:center">Importă JSON<input id="importJSON" type="file" accept="application/json"></label>
+  </div>
+  <p id="sheetStatus" role="status"></p>
+  <h3>Cazuri notate în bancul virtual</h3>
+  <div class="overflow"><table><thead><tr><th>#</th><th>Experiment</th><th>Parametri</th><th>Rezultat</th></tr></thead><tbody id="sheetCases"></tbody></table></div>
+  <h3>Capturi recomandate pentru raport</h3>
+  <ul>
+    <li>C1 – experimentul A cu R-ul tău standard și curentul obținut.</li>
+    <li>C2 – experimentul B cu sarcina variantei, comparat cu „fără sarcină”.</li>
+    <li>C3 – experimentul C oprit la t = τ și graficul |H(f)|.</li>
+  </ul>
+  <label>Concluzii (cel puțin trei, fiecare susținută de un rezultat)<textarea id="concl"></textarea></label>
+  <p class="small">Fișa se salvează doar în acest browser (dacă browserul permite). Pentru siguranță exportă JSON sau tipărește. Aplicația nu trimite date și nu acordă note.</p>
+</section>
+
+<!-- ============ 4 · BREVIAR ============ -->
+<section class="panel" id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+  <h2>Breviar</h2>
+  <details open><summary>Legea lui Ohm, Kirchhoff, putere</summary>
+    <div class="formula">U = R·I &nbsp;&nbsp; ∑U = 0 pe o buclă &nbsp;&nbsp; P = U·I = I²R = U²/R</div>
+    <p>Curentul se măsoară în serie, tensiunea în paralel, rezistența fără alimentare.</p>
+  </details>
+  <details><summary>Rezistorul pentru LED</summary>
+    <div class="formula">R = (U − U<sub>F</sub>) / I<sub>LED</sub></div>
+    <p>Se alege valoarea standard E12 imediat mai mare (curent puțin mai mic), apoi se recalculează curentul: I = (U − U<sub>F</sub>) / R<sub>std</sub>. Exemplu L01: (3,3 − 2,0) / 330 ≈ 3,94 mA.</p>
+  </details>
+  <details><summary>Divizorul de tensiune</summary>
+    <div class="formula">U<sub>out</sub> = U<sub>in</sub> · R2 / (R1 + R2) &nbsp;&nbsp; cu sarcină: R2 → R2∥R<sub>L</sub> = R2·R<sub>L</sub>/(R2 + R<sub>L</sub>)</div>
+    <p>Regula practică: R<sub>L</sub> de cel puțin 10 ori mai mare decât R2. Pentru un senzor rezistiv, sensibilitatea maximă se obține cu R<sub>fix</sub> egal cu rezistența senzorului în punctul de lucru.</p>
+    <p>Model NTC: R(T) = R<sub>25</sub> · exp[B(1/T − 1/298,15)], T în kelvin; R<sub>25</sub> = 10 kΩ, B = 3950 K (ilustrativ).</p>
+  </details>
+  <details><summary>Circuitul RC</summary>
+    <div class="formula">u<sub>C</sub>(t) = U(1 − e<sup>−t/τ</sup>), τ = RC &nbsp;&nbsp; f<sub>c</sub> = 1/(2πRC), |H| = 1/√(1 + (f/f<sub>c</sub>)²)</div>
+    <p>63,2 % la τ; 95 % la 3τ; 99,3 % la 5τ. Pulsul (40–180 bpm) are 0,67–3 Hz; rețeaua 50 Hz.</p>
+  </details>
+  <details><summary>Butonul, pull-up, praguri ESP32</summary>
+    <p>INPUT_PULLUP: pull-up intern tipic ≈ 45 kΩ; apăsat = LOW. Curentul la apăsare: I = 3,3 V / R<sub>PU</sub>. Praguri garantate: V<sub>IH</sub> ≥ 0,75·VDD ≈ 2,48 V, V<sub>IL</sub> ≤ 0,25·VDD ≈ 0,83 V; tensiunea maximă pe pin ≈ 3,6 V.</p>
+  </details>
+  <details><summary>Parametrizarea după N</summary>
+    <table>
+      <tr><th>Mărime</th><th>Regula</th></tr>
+      <tr><td>LED</td><td>culoarea = [roșu 2,0 V; galben 2,1 V; verde 2,2 V][N mod 3]; I<sub>țintă</sub> = 2 + (N mod 4) mA</td></tr>
+      <tr><td>Divizor</td><td>R1 = [4,7; 10; 15; 22][N mod 4] kΩ; R2 = [10; 15; 22; 33][⌊N/4⌋ mod 4] kΩ; R<sub>L</sub> = [10; 47; 100][N mod 3] kΩ; U<sub>in</sub> = 3,3 V</td></tr>
+      <tr><td>RC</td><td>R = [1; 2,2; 4,7; 10][N mod 4] kΩ; C = [0,1; 0,22; 0,47; 1][⌊N/3⌋ mod 4] µF</td></tr>
+      <tr><td>Pull-up</td><td>R<sub>PU</sub> = [4,7; 10; 22][⌊N/2⌋ mod 3] kΩ</td></tr>
+      <tr><td>Cod culori</td><td>cifrele = valoarea E12 de indice N mod 12; multiplicator = 10<sup>⌊N/12⌋ mod 4</sup></td></tr>
+    </table>
+  </details>
+  <details><summary>Bibliografie</summary>
+    <p>Espressif Systems, ESP32 Series Datasheet (DC Characteristics). · Espressif, Arduino-ESP32 GPIO API. · P. Horowitz, W. Hill, The Art of Electronics, ed. 3, 2015. · IEC 60062, IEC 60063. · Argatu F. C., SMMeH C02 – Componente de circuit (curs, v1.1) și L01 – Primii pași cu ESP32 (v1.0).</p>
+  </details>
+</section>
+
+<footer>Florin Ciprian Argatu · SMMeH · anul universitar 2026–2027 · <span id="verOut"></span> · Aplicația rulează local, nu transmite date și nu acordă note.</footer>
+</main>
+
+<script>
+'use strict';
+const VERSION = '1.0';
+const CODE = 'SMMeH-L03';
+const N_MIN = 1, N_MAX = 42, N_EXEMPLU = 7;
+const E12 = [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2];
+const LEDS = [{ name: 'roșu', uf: 2.0 }, { name: 'galben', uf: 2.1 }, { name: 'verde clasic', uf: 2.2 }, { name: 'albastru', uf: 3.0 }];
+const COLORS = [
+  { n: 'negru', c: '#000000' }, { n: 'maro', c: '#7c4a1e' }, { n: 'roșu', c: '#dc2626' }, { n: 'portocaliu', c: '#f97316' },
+  { n: 'galben', c: '#facc15' }, { n: 'verde', c: '#16a34a' }, { n: 'albastru', c: '#2563eb' }, { n: 'violet', c: '#7c3aed' },
+  { n: 'gri', c: '#6b7280' }, { n: 'alb', c: '#ffffff' }
+];
+const TOLC = { 5: '#c9a227', 10: '#c0c0c0', 1: '#7c4a1e' };
+
+// ---------- bloc comun ----------
+const $ = id => document.getElementById(id);
+function fmt(v, d = 2) {
+  if (!Number.isFinite(v)) return '—';
+  return v.toFixed(d).replace('.', ',');
+}
+function esc(t) {
+  return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function status(id, msg, cls) {
+  const el = $(id);
+  el.textContent = msg;
+  if (cls !== undefined) el.className = cls;
+}
+function download(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function toCSV(rows) {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  return '\ufeff' + rows.map(r => r.map(q).join(';')).join('\r\n');
+}
+function validN(v) {
+  const n = Number(v);
+  if (String(v).trim() === '' || !Number.isInteger(n) || n < N_MIN || n > N_MAX) return null;
+  return n;
+}
+function eNext(x) { // cea mai mică valoare E12 >= x
+  const dec = Math.pow(10, Math.floor(Math.log10(x)));
+  for (const k of [1, 10]) for (const e of E12) { const v = e * dec * k; if (v >= x * (1 - 1e-9)) return v; }
+  return 10 * dec;
+}
+function trim0(t) { return t.replace(/,0+$/, '').replace(/(,\d*?)0+$/, '$1'); }
+function ohm(r) { // r în ohmi
+  if (r >= 1e6) return trim0(fmt(r / 1e6, 2)) + ' MΩ';
+  if (r >= 1e3) return trim0(fmt(r / 1e3, 2)) + ' kΩ';
+  return trim0(fmt(r, r < 10 ? 2 : (r < 100 ? 1 : 0))) + ' Ω';
+}
+function kohm(k) { return ohm(k * 1e3); }
+function cap(c) { // c în farazi
+  if (c >= 1e-6) return fmt(c * 1e6, 2) + ' µF';
+  return fmt(c * 1e9, 0) + ' nF';
+}
+function timeS(t) {
+  if (t >= 1) return fmt(t, 2) + ' s';
+  if (t >= 1e-3) return fmt(t * 1e3, 2) + ' ms';
+  return fmt(t * 1e6, 1) + ' µs';
+}
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 500, h = cv.clientHeight || 270;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  return { g, w, h };
+}
+// axe generice: xs log sau liniar
+function plot(cv, o) {
+  const { g, w, h } = setupCanvas(cv);
+  const L = 58, R = 16, T = 26, B = 42, pw = w - L - R, ph = h - T - B;
+  const tx = o.xlog ? (x => L + (Math.log10(x) - Math.log10(o.x0)) / (Math.log10(o.x1) - Math.log10(o.x0)) * pw)
+                    : (x => L + (x - o.x0) / (o.x1 - o.x0) * pw);
+  const ty = y => T + ph - (y - o.y0) / (o.y1 - o.y0) * ph;
+  g.font = '12px system-ui, Arial'; g.fillStyle = '#111'; g.strokeStyle = '#d1d5db'; g.lineWidth = 1;
+  if (o.bands) o.bands.forEach(b => { g.fillStyle = b.color; g.fillRect(L, ty(b.y1), pw, ty(b.y0) - ty(b.y1)); });
+  g.fillStyle = '#111';
+  (o.yt || []).forEach(v => { g.strokeStyle = '#e5e7eb'; g.beginPath(); g.moveTo(L, ty(v)); g.lineTo(L + pw, ty(v)); g.stroke(); g.textAlign = 'right'; g.fillText(o.yf ? o.yf(v) : fmt(v, 1), L - 6, ty(v) + 4); });
+  (o.xt || []).forEach(v => { g.textAlign = 'center'; g.fillText(o.xf ? o.xf(v) : fmt(v, 1), tx(v), T + ph + 16); g.strokeStyle = '#f1f5f9'; g.beginPath(); g.moveTo(tx(v), T); g.lineTo(tx(v), T + ph); g.stroke(); });
+  g.strokeStyle = '#374151'; g.beginPath(); g.moveTo(L, T); g.lineTo(L, T + ph); g.lineTo(L + pw, T + ph); g.stroke();
+  g.textAlign = 'center'; g.fillText(o.xl || '', L + pw / 2, h - 6);
+  g.save(); g.translate(13, T + ph / 2); g.rotate(-Math.PI / 2); g.fillText(o.yl || '', 0, 0); g.restore();
+  g.textAlign = 'left'; g.font = '600 13px system-ui, Arial'; g.fillText(o.title || '', L, 16);
+  (o.series || []).forEach(s => {
+    g.strokeStyle = s.color; g.lineWidth = s.width || 2.5; g.setLineDash(s.dash || []); g.beginPath();
+    s.pts.forEach((p, i) => { const X = tx(p[0]), Y = ty(Math.max(o.y0, Math.min(o.y1, p[1]))); i ? g.lineTo(X, Y) : g.moveTo(X, Y); });
+    g.stroke(); g.setLineDash([]);
+    if (s.label) { const p = s.pts[s.labelAt ?? s.pts.length - 1]; g.fillStyle = s.color; g.font = '12px system-ui, Arial'; g.textAlign = 'right'; g.fillText(s.label, Math.min(tx(p[0]), L + pw) - 4, ty(p[1]) - 6); }
+  });
+  (o.marks || []).forEach(m => { g.fillStyle = m.color || '#a32121'; g.beginPath(); g.arc(tx(m.x), ty(m.y), 5, 0, 2 * Math.PI); g.fill(); if (m.text) { g.font = '12px system-ui, Arial'; g.textAlign = m.align || 'left'; g.fillText(m.text, tx(m.x) + (m.align === 'right' ? -8 : 8), ty(m.y) + (m.below ? 18 : -8)); } });
+}
+
+// ---------- varianta ----------
+function variant(N) {
+  const led = LEDS[N % 3];
+  const iT = 2 + (N % 4);                     // mA
+  const rIdeal = (3.3 - led.uf) / (iT / 1000);  // ohmi
+  const rStd = eNext(rIdeal);
+  const iReal = (3.3 - led.uf) / rStd * 1000;   // mA
+  const R1 = [4.7, 10, 15, 22][N % 4], R2 = [10, 15, 22, 33][Math.floor(N / 4) % 4], RL = [10, 47, 100][N % 3]; // kΩ
+  const u0 = 3.3 * R2 / (R1 + R2);
+  const r2l = R2 * RL / (R2 + RL);
+  const u1 = 3.3 * r2l / (R1 + r2l);
+  const Rc = [1, 2.2, 4.7, 10][N % 4], Cc = [0.1, 0.22, 0.47, 1][Math.floor(N / 3) % 4]; // kΩ, µF
+  const tau = Rc * 1e3 * Cc * 1e-6; // s
+  const fc = 1 / (2 * Math.PI * tau);
+  const Rpu = [4.7, 10, 22][Math.floor(N / 2) % 3]; // kΩ
+  const ipu = 3.3 / Rpu; // mA
+  const idx = N % 12, d = Math.round(E12[idx] * 10), mexp = Math.floor(N / 12) % 4;
+  const rCol = d * Math.pow(10, mexp);
+  return { N, led, iT, rIdeal, rStd, iReal, R1, R2, RL, u0, u1, Rc, Cc, tau, fc, Rpu, ipu, d1: Math.floor(d / 10), d2: d % 10, mexp, rCol };
+}
+let V = null;
+function codeOf(v) { return `${CODE}-N${String(v.N).padStart(2, '0')}-v${VERSION}`; }
+
+const ANSWERS = [
+  { id: 'qR', label: 'R ideal pentru LED [Ω]', key: v => v.rIdeal, tol: 0.02 },
+  { id: 'qRs', label: 'R standard E12 ales [Ω]', key: v => v.rStd, tol: 0.001 },
+  { id: 'qI', label: 'I real cu R standard [mA]', key: v => v.iReal, tol: 0.02 },
+  { id: 'qU0', label: 'U_out fără sarcină [V]', key: v => v.u0, tol: 0.02 },
+  { id: 'qU1', label: 'U_out cu R_L [V]', key: v => v.u1, tol: 0.02 },
+  { id: 'qTau', label: 'τ = RC [ms]', key: v => v.tau * 1e3, tol: 0.02 },
+  { id: 'qFc', label: 'f_c [Hz]', key: v => v.fc, tol: 0.02 },
+  { id: 'qIpu', label: 'I pull-up la apăsare [mA]', key: v => v.ipu, tol: 0.02 },
+  { id: 'qCol', label: 'Valoarea rezistorului din benzi [Ω]', key: v => v.rCol, tol: 0.001 }
+];
+
+function renderVariant() {
+  const v = V;
+  $('codeOut').value = codeOf(v);
+  $('sCode').value = codeOf(v);
+  $('verOut').textContent = `${CODE} v${VERSION}`;
+  const col = `${COLORS[v.d1].n} · ${COLORS[v.d2].n} · ${COLORS[v.mexp].n}`;
+  const items = [
+    ['LED', `${v.led.name}, U<sub>F</sub> = ${fmt(v.led.uf, 1)} V, I<sub>țintă</sub> = ${v.iT} mA`],
+    ['Divizor', `R1 = ${kohm(v.R1)}, R2 = ${kohm(v.R2)}, R<sub>L</sub> = ${kohm(v.RL)}`],
+    ['RC', `R = ${kohm(v.Rc)}, C = ${cap(v.Cc * 1e-6)}`],
+    ['Pull-up', `R<sub>PU</sub> = ${kohm(v.Rpu)}, 3,3 V`],
+    ['Benzi', `${col} · auriu`]
+  ];
+  $('dataOut').innerHTML = items.map(i => `<div class="datum">${i[0]}<b>${i[1]}</b></div>`).join('');
+  $('givenTable').innerHTML = '<tr><th>Bloc</th><th>Date impuse</th></tr>' + items.map(i => `<tr><td>${i[0]}</td><td>${i[1]}</td></tr>`).join('');
+  $('printHead').textContent = `${codeOf(v)} · grupa ${$('groupIn').value}`;
+}
+function applyN(n) {
+  const N = validN(n);
+  if (N === null) { status('nStatus', `Introdu un N întreg între ${N_MIN} și ${N_MAX}.`, 'error noprint'); return false; }
+  status('nStatus', '', 'error noprint');
+  $('nIn').value = N;
+  V = variant(N);
+  renderVariant();
+  presetBench();
+  ANSWERS.forEach(a => { $(a.id).value = ''; $(a.id + 'm').textContent = ''; });
+  restoreLocal();
+  return true;
+}
+
+// ---------- tabs ----------
+const tabs = ['t1', 't2', 't3', 't4'];
+function showTab(id) {
+  tabs.forEach(t => { const on = t === id; $(t).setAttribute('aria-selected', String(on)); $('p' + t.slice(1)).hidden = !on; });
+  if (id === 't2') redraw();
+}
+tabs.forEach(t => $(t).addEventListener('click', () => showTab(t)));
+
+// ---------- experimente ----------
+let EXP = 'A';
+document.querySelectorAll('[data-exp]').forEach(b => b.addEventListener('click', () => {
+  EXP = b.dataset.exp;
+  document.querySelectorAll('[data-exp]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  ['A', 'B', 'C', 'D', 'E'].forEach(k => { $('exp' + k).hidden = k !== EXP; });
+  redraw();
+}));
+function redraw() { ({ A: drawA, B: drawB, C: drawC, D: drawD, E: drawE })[EXP](); }
+
+// A
+const RLIST = []; [100, 1000].forEach(dec => E12.forEach(e => RLIST.push(Math.round(e * dec)))); RLIST.push(10000);
+LEDS.forEach((l, i) => $('aLed').insertAdjacentHTML('beforeend', `<option value="${i}">${l.name} (${fmt(l.uf, 1)} V)</option>`));
+RLIST.forEach(r => $('aR').insertAdjacentHTML('beforeend', `<option value="${r}">${ohm(r)}</option>`));
+function aCalc() {
+  const U = Number($('aU').value), uf = LEDS[Number($('aLed').value)].uf, R = Number($('aR').value);
+  const ur = Math.max(0, U - uf), I = ur / R;
+  return { U, uf, R, ur, I, P: I * I * R };
+}
+function drawA() {
+  const c = aCalc();
+  $('aUR').textContent = fmt(c.ur, 2) + ' V';
+  $('aI').textContent = fmt(c.I * 1e3, 2) + ' mA';
+  $('aP').textContent = fmt(c.P * 1e3, 1) + ' mW';
+  let st = 'potrivit', msg = '';
+  if (c.ur <= 0) { st = 'nu se aprinde'; msg = 'Tensiunea sursei nu depășește U_F: LED-ul nu conduce.'; }
+  else if (c.I * 1e3 > 10) { st = 'curent mare'; msg = 'Peste ≈ 10 mA: verificați fișa LED-ului; la 3,3 V curentul este cerut direct pinului.'; }
+  else if (c.I * 1e3 < 1) { st = 'slab'; msg = 'Sub 1 mA: LED-ul poate fi greu vizibil; la U − U_F mic, curentul este sensibil la variațiile lui U_F.'; }
+  else msg = 'Câțiva mA: valoare uzuală pentru un LED indicator.';
+  if (c.U === 5) msg += ' La 5 V, LED-ul se alimentează printr-un tranzistor comandat de GPIO, nu direct din pin.';
+  $('aState').textContent = st; $('aMsg').textContent = msg;
+  $('aSvgU').textContent = fmt(c.U, 1) + ' V'; $('aSvgR').textContent = 'R = ' + ohm(c.R);
+  $('aGlow').setAttribute('opacity', String(Math.min(0.85, c.I * 1e3 / 12)));
+  const pts = []; for (let k = 0; k <= 200; k++) { const r = 100 * Math.pow(100, k / 200); pts.push([r, Math.max(0, c.U - c.uf) / r * 1e3]); }
+  const ymax = Math.max(4, Math.ceil(Math.max(0, c.U - c.uf) / 100 * 1e3 / 4) * 4);
+  plot($('aChart'), { xlog: true, x0: 100, x1: 10000, y0: 0, y1: ymax, xt: [100, 220, 470, 1000, 2200, 4700, 10000], xf: v => ohm(v).replace(' ', '\u202f'),
+    yt: [0, ymax / 4, ymax / 2, 3 * ymax / 4, ymax], yf: v => fmt(v, 1), xl: 'R (scară logaritmică)', yl: 'I [mA]', title: `I = (${fmt(c.U, 1)} − ${fmt(c.uf, 1)}) V / R`,
+    series: [{ pts, color: '#0f766e' }], marks: [{ x: c.R, y: c.I * 1e3, text: fmt(c.I * 1e3, 2) + ' mA', align: c.R > 3000 ? 'right' : 'left' }] });
+}
+['aU', 'aLed', 'aR'].forEach(id => $(id).addEventListener('change', drawA));
+
+// B
+const RFIX = [2.2, 3.3, 4.7, 5.6, 6.8, 10, 15, 22, 33];
+RFIX.forEach(r => $('bRf').insertAdjacentHTML('beforeend', `<option value="${r}">${fmt(r, 1)} kΩ</option>`));
+$('bRf').value = '10';
+const rNTC = T => 10 * Math.exp(3950 * (1 / (T + 273.15) - 1 / 298.15)); // kΩ
+function numIn(id, min, max) {
+  const v = Number(String($(id).value).replace(',', '.'));
+  return ($(id).value !== '' && Number.isFinite(v) && v >= min && v <= max) ? v : null;
+}
+function drawB() {
+  const ntc = $('bMode').value === 'ntc';
+  ['bR1L', 'bR2L', 'bRLL', 'bNoLoadL'].forEach(id => { $(id).hidden = ntc; });
+  ['bTL', 'bRfL'].forEach(id => { $(id).hidden = !ntc; });
+  const labs = ntc ? ['U<sub>out</sub>', 'R<sub>NTC</sub>', 'Sensibilitate', 'Curent în divizor'] : ['U<sub>out</sub> ideal', 'U<sub>out</sub> cu sarcină', 'Eroare', 'Curent prin R1'];
+  labs.forEach((t, i) => { $('bL' + i).innerHTML = t; });
+  const Uin = numIn('bUin', 0.1, 12);
+  if (Uin === null) { status('bMsg', 'U_in trebuie să fie între 0,1 și 12 V.', 'error'); return; }
+  if (ntc) {
+    const T = Number($('bT').value), Rf = Number($('bRf').value), Rs = rNTC(T);
+    const u = Uin * Rs / (Rf + Rs);
+    const s = Uin * Rf * Rs / Math.pow(Rf + Rs, 2) * 3950 / Math.pow(T + 273.15, 2) * 1000; // mV/°C
+    $('bU0').textContent = fmt(u, 3) + ' V'; $('bU1').textContent = fmt(Rs, 2) + ' kΩ';
+    $('bErr').textContent = fmt(s, 1) + ' mV/°C'; $('bI').textContent = fmt(Uin / (Rf + Rs), 3) + ' mA';
+    status('bMsg', `La ${fmt(T, 1)} °C: U_out = ${fmt(u, 3)} V; sensibilitate ≈ ${fmt(s, 1)} mV/°C (valoare absolută a pantei).`, 'small');
+    const pts = []; for (let t = 20; t <= 45.001; t += 0.5) pts.push([t, Uin * rNTC(t) / (Rf + rNTC(t))]);
+    plot($('bChart'), { x0: 20, x1: 45, y0: 0, y1: Uin, xt: [20, 25, 30, 35, 40, 45], xf: v => fmt(v, 0), yt: [0, Uin / 4, Uin / 2, 3 * Uin / 4, Uin], yf: v => fmt(v, 2),
+      xl: 'Temperatura [°C]', yl: 'U_out [V]', title: `NTC 10 kΩ (B = 3950 K, model) cu R_fix = ${fmt(Rf, 1)} kΩ`, series: [{ pts, color: '#0f766e' }], marks: [{ x: T, y: u, text: fmt(u, 3) + ' V' }] });
+    $('bChartNote').textContent = 'Model NTC ilustrativ. Panta este cea mai mare când R_fix este apropiat de R_NTC la temperatura de lucru.';
+    return;
+  }
+  const R1 = numIn('bR1', 0.1, 1000), R2 = numIn('bR2', 0.1, 1000), RL = numIn('bRL', 0.1, 10000), noLoad = $('bNoLoad').checked;
+  if (R1 === null || R2 === null || (!noLoad && RL === null)) { status('bMsg', 'Completați R1, R2 (0,1…1000 kΩ) și R_L (0,1…10 000 kΩ) sau bifați „Fără sarcină”.', 'error'); return; }
+  const u0 = Uin * R2 / (R1 + R2);
+  const r2l = noLoad ? R2 : R2 * RL / (R2 + RL);
+  const u1 = Uin * r2l / (R1 + r2l);
+  $('bU0').textContent = fmt(u0, 3) + ' V'; $('bU1').textContent = noLoad ? '—' : fmt(u1, 3) + ' V';
+  $('bErr').textContent = noLoad ? '0 %' : fmt((u1 - u0) / u0 * 100, 1) + ' %'; $('bI').textContent = fmt(Uin / (R1 + r2l), 3) + ' mA';
+  let m = noLoad ? 'Fără sarcină, relația divizorului este exactă.' : `R2∥R_L = ${fmt(r2l, 2)} kΩ. Raportul R_L/R2 = ${fmt(RL / R2, 1)}.`;
+  if (!noLoad) m += RL / R2 >= 10 ? ' Sarcina respectă regula „de cel puțin 10 ori”.' : ' Sarcina este prea mică față de R2: tensiunea scade vizibil.';
+  if (u1 > 3.6 || u0 > 3.6) m += ' Atenție: peste 3,6 V nu se aplică pe un GPIO ESP32.';
+  status('bMsg', m, 'small');
+  const pts = []; for (let k = 0; k <= 160; k++) { const rl = 0.1 * Math.pow(1e5, k / 160); const p = R2 * rl / (R2 + rl); pts.push([rl, Uin * p / (R1 + p)]); }
+  plot($('bChart'), { xlog: true, x0: 0.1, x1: 10000, y0: 0, y1: Uin, xt: [0.1, 1, 10, 100, 1000, 10000], xf: v => (v < 1 ? fmt(v, 1) : fmt(v, 0)), yt: [0, Uin / 4, Uin / 2, 3 * Uin / 4, Uin], yf: v => fmt(v, 2),
+    xl: 'R_L [kΩ] (scară logaritmică)', yl: 'U_out [V]', title: 'Tensiunea de ieșire în funcție de sarcină',
+    series: [{ pts, color: '#0f766e' }, { pts: [[0.1, u0], [10000, u0]], color: '#2563a6', dash: [6, 4], width: 1.5, label: 'fără sarcină', labelAt: 1 }],
+    marks: noLoad ? [] : [{ x: RL, y: u1, text: fmt(u1, 3) + ' V', align: RL > 1000 ? 'right' : 'left', below: true }] });
+  $('bChartNote').textContent = 'Linia punctată: valoarea fără sarcină. Curba se apropie de ea când R_L crește.';
+}
+['bMode', 'bUin', 'bR1', 'bR2', 'bRL', 'bNoLoad', 'bT', 'bRf'].forEach(id => $(id).addEventListener('input', drawB));
+$('bMode').addEventListener('change', drawB);
+
+// C
+[1, 2.2, 4.7, 10, 22, 47, 100].forEach(r => $('cR').insertAdjacentHTML('beforeend', `<option value="${r}">${fmt(r, 1)} kΩ</option>`));
+[0.01, 0.1, 0.22, 0.47, 1, 10].forEach(c => $('cC').insertAdjacentHTML('beforeend', `<option value="${c}">${cap(c * 1e-6)}</option>`));
+let cPlaying = false, cT = 0, cLast = 0; // cT in multipli de τ
+function cVals() { const R = Number($('cR').value) * 1e3, C = Number($('cC').value) * 1e-6, tau = R * C; return { R, C, tau, fc: 1 / (2 * Math.PI * tau) }; }
+function drawC() {
+  const v = cVals();
+  const H = f => 1 / Math.sqrt(1 + Math.pow(f / v.fc, 2));
+  $('cTau').textContent = timeS(v.tau); $('cFc').textContent = v.fc >= 1000 ? fmt(v.fc / 1000, 2) + ' kHz' : fmt(v.fc, 2) + ' Hz';
+  const u = 100 * (1 - Math.exp(-cT));
+  $('cNow').textContent = `${timeS(cT * v.tau)} / ${fmt(u, 1)} %`;
+  $('cH').textContent = `${fmt(H(1), 3)} / ${fmt(H(50), 3)}`;
+  const pts = []; for (let k = 0; k <= 200; k++) { const x = 5 * k / 200; pts.push([x, 100 * (1 - Math.exp(-x))]); }
+  const done = pts.filter(p => p[0] <= cT);
+  plot($('cChart'), { x0: 0, x1: 5, y0: 0, y1: 100, xt: [0, 1, 2, 3, 4, 5], xf: k => k ? k + 'τ' : '0', yt: [0, 25, 50, 63.2, 75, 100], yf: v => fmt(v, v === 63.2 ? 1 : 0),
+    xl: `Timp (τ = ${timeS(v.tau)})`, yl: 'u_C / U [%]', title: 'Încărcarea condensatorului',
+    series: [{ pts, color: '#b8d5ce', width: 2 }, { pts: done.length > 1 ? done : [[0, 0], [0, 0]], color: '#0f766e', width: 3 }], marks: [{ x: Math.min(cT, 5), y: u, text: fmt(u, 1) + ' %', align: cT > 3.5 ? 'right' : 'left' }] });
+  const bp = []; for (let k = 0; k <= 200; k++) { const f = 0.1 * Math.pow(1e5, k / 200); bp.push([f, H(f)]); }
+  plot($('cBode'), { xlog: true, x0: 0.1, x1: 10000, y0: 0, y1: 1.05, xt: [0.1, 1, 10, 100, 1000, 10000], xf: f => (f < 1 ? fmt(f, 1) : f >= 1000 ? (f / 1000) + ' k' : String(f)), yt: [0, 0.25, 0.5, 0.707, 1], yf: v => fmt(v, v === 0.707 ? 3 : 2),
+    xl: 'Frecvența [Hz] (scară logaritmică)', yl: '|H|', title: `Filtrul RC trece-jos, f_c = ${$('cFc').textContent}`,
+    bands: [{ y0: 0, y1: 1.05, color: 'rgba(255,255,255,0)' }],
+    series: [{ pts: bp, color: '#0f766e' }], marks: [{ x: 1, y: H(1), text: 'puls 1 Hz', color: '#2563a6' }, { x: 50, y: H(50), text: '50 Hz: ' + fmt(H(50), 2), color: '#a32121' }] });
+}
+function cTick(ts) {
+  if (!cPlaying) return;
+  const dt = cLast ? (ts - cLast) / 1000 : 0; cLast = ts;
+  cT = Math.min(5, cT + dt * Number($('cSpeed').value));
+  drawC();
+  if (cT >= 5) { cPlaying = false; $('cPlay').textContent = 'Pornește'; return; }
+  requestAnimationFrame(cTick);
+}
+$('cPlay').addEventListener('click', () => {
+  cPlaying = !cPlaying; $('cPlay').textContent = cPlaying ? 'Pauză' : 'Pornește';
+  if (cPlaying) { if (cT >= 5) cT = 0; cLast = 0; requestAnimationFrame(cTick); }
+});
+$('cReset').addEventListener('click', () => { cPlaying = false; cT = 0; $('cPlay').textContent = 'Pornește'; drawC(); });
+['cR', 'cC'].forEach(id => $(id).addEventListener('change', () => { cT = 0; cPlaying = false; $('cPlay').textContent = 'Pornește'; drawC(); }));
+
+// D
+[4.7, 10, 22, 45].forEach(r => $('dPu').insertAdjacentHTML('beforeend', `<option value="${r}">${r === 45 ? 'intern ≈ 45 kΩ' : fmt(r, 1) + ' kΩ extern'}</option>`));
+// tipar de rebond fix (ms): momentele în care contactul își schimbă starea, după evenimentul de la 0,2 ms
+const BOUNCE = [0.20, 0.32, 0.50, 0.66, 0.95, 1.10, 1.55]; // număr impar de comutări: starea finală este cea nouă
+function dSim() {
+  const press = $('dEv').value === 'press', Cn = Number($('dRC').value) * 1e-9, rc = Cn > 0, Rpu = Number($('dPu').value) * 1e3;
+  // contact: closed (true) / open
+  const contact = t => { let s = !press; BOUNCE.forEach(b => { if (t >= b) s = !s; }); return s; };
+  const dt = 0.002, tEnd = 10, pts = [], raw = [];
+  let vB = press ? 3.3 : 0, edges = 0, lvl = vB > 1.65 ? 1 : 0;
+  // fără RC: tensiunea pinului urmează contactul. Cu RC: nodul A urmează contactul (A = 0 dacă închis, altfel tinde spre 3,3 V prin Rpu),
+  // nodul B: C = 100 nF; închis → descărcare prin 1 kΩ; deschis → încărcare prin Rpu + 1 kΩ.
+  for (let t = 0; t <= tEnd + 1e-9; t += dt) {
+    const cl = contact(t);
+    raw.push([t, cl ? 0 : 3.3]);
+    if (!rc) vB = cl ? 0 : 3.3;
+    else {
+      const tau = cl ? 1e3 * Cn : (Rpu + 1e3) * Cn; // s
+      const target = cl ? 0 : 3.3;
+      vB = target + (vB - target) * Math.exp(-(dt * 1e-3) / tau);
+    }
+    pts.push([t, vB]);
+    const nl = vB > 1.65 ? 1 : 0; if (nl !== lvl) { edges++; lvl = nl; }
+  }
+  return { pts, raw, edges, final: lvl, Rpu, rc, tauOpen: (Rpu + 1e3) * Cn, tauClose: 1e3 * Cn };
+}
+let dLast = null;
+function drawD() {
+  const s = dSim(); dLast = s;
+  $('dI').textContent = fmt(3.3 / s.Rpu * 1e3, 3) + ' mA';
+  $('dEdges').textContent = String(s.edges);
+  $('dFinal').textContent = s.final ? 'HIGH' : 'LOW';
+  $('dTau').textContent = s.rc ? `${timeS(s.tauClose)} (închis) / ${timeS(s.tauOpen)} (deschis)` : 'fără filtru';
+  plot($('dChart'), { x0: 0, x1: 10, y0: 0, y1: 3.6, xt: [0, 2, 4, 6, 8, 10], xf: v => fmt(v, 0), yt: [0, 0.83, 1.65, 2.48, 3.3], yf: v => fmt(v, 2),
+    bands: [{ y0: 0.825, y1: 2.475, color: 'rgba(251,191,36,0.18)' }],
+    xl: 'Timp după eveniment [ms]', yl: 'Tensiune [V]', title: s.rc ? 'Pinul cu filtru RC (verde) și contactul brut (gri)' : 'Pinul fără filtru: urmează contactul',
+    series: [{ pts: s.raw, color: '#9ca3af', width: 1.5 }, { pts: s.pts, color: '#0f766e', width: 2.5 }] });
+}
+['dPu', 'dRC', 'dEv'].forEach(id => $(id).addEventListener('change', drawD));
+$('dRun').addEventListener('click', drawD);
+
+// E
+COLORS.forEach((c, i) => { ['e1', 'e2'].forEach(id => $(id).insertAdjacentHTML('beforeend', `<option value="${i}">${c.n} (${i})</option>`)); });
+[[0, '×1'], [1, '×10'], [2, '×100'], [3, '×1 k'], [4, '×10 k'], [5, '×100 k'], [6, '×1 M'], [-1, '×0,1 (auriu)'], [-2, '×0,01 (argintiu)']]
+  .forEach(m => $('e3').insertAdjacentHTML('beforeend', `<option value="${m[0]}">${m[0] >= 0 ? COLORS[m[0]].n : (m[0] === -1 ? 'auriu' : 'argintiu')} ${m[1]}</option>`));
+function drawE() {
+  const d1 = Number($('e1').value), d2 = Number($('e2').value), m = Number($('e3').value), tol = Number($('e4').value);
+  const r = (10 * d1 + d2) * Math.pow(10, m);
+  $('eVal').textContent = r > 0 ? ohm(r) + ' ±' + tol + ' %' : '0 Ω';
+  $('eMin').textContent = ohm(r * (1 - tol / 100)); $('eMax').textContent = ohm(r * (1 + tol / 100));
+  const mant = (10 * d1 + d2) / 10, inE12 = E12.some(e => Math.abs(e - mant) < 1e-9);
+  $('eE12').textContent = inE12 ? 'da' : 'nu (E24 sau altă serie)';
+  const mc = m >= 0 ? COLORS[m].c : (m === -1 ? '#c9a227' : '#c0c0c0');
+  [['eb1', COLORS[d1].c], ['eb2', COLORS[d2].c], ['eb3', mc], ['eb4', TOLC[tol]]].forEach(([id, c]) => { $(id).setAttribute('fill', c); $(id).setAttribute('stroke', c === '#ffffff' ? '#9ca3af' : c); });
+}
+['e1', 'e2', 'e3', 'e4'].forEach(id => $(id).addEventListener('change', drawE));
+$('eMine').addEventListener('click', () => { $('e1').value = V.d1; $('e2').value = V.d2; $('e3').value = V.mexp; $('e4').value = '5'; drawE(); });
+
+// preset bench from variant
+function presetBench() {
+  $('aU').value = '3.3'; $('aLed').value = String(LEDS.indexOf(V.led)); $('aR').value = String(Math.round(V.rStd));
+  if (!$('aR').value) $('aR').value = '330';
+  $('bMode').value = 'div'; $('bUin').value = '3.3'; $('bR1').value = V.R1; $('bR2').value = V.R2; $('bRL').value = V.RL; $('bNoLoad').checked = false;
+  $('cR').value = String(V.Rc); $('cC').value = String(V.Cc); cT = 0; cPlaying = false; $('cPlay').textContent = 'Pornește';
+  $('dPu').value = String(V.Rpu); $('dRC').value = '0'; $('dEv').value = 'press';
+  $('e1').value = '3'; $('e2').value = '3'; $('e3').value = '1'; $('e4').value = '5';
+  redraw();
+}
+
+// ---------- cazuri ----------
+let cases = [];
+function addCase(exp, params, result) {
+  cases.push({ exp, params, result, time: new Date().toISOString() });
+  renderCases(); saveLocal(); status('caseStatus', `Caz notat (${cases.length}).`, 'small');
+}
+function renderCases() {
+  const html = cases.map((c, i) => `<tr><td>${i + 1}</td><td>${esc(c.exp)}</td><td>${esc(c.params)}</td><td>${esc(c.result)}</td></tr>`).join('') || '<tr><td colspan="4">Niciun caz notat încă.</td></tr>';
+  $('caseRows').innerHTML = html; $('sheetCases').innerHTML = html;
+}
+$('aNote').addEventListener('click', () => { const c = aCalc(); addCase('A · LED', `U = ${fmt(c.U, 1)} V; U_F = ${fmt(c.uf, 1)} V; R = ${ohm(c.R)}`, `I = ${fmt(c.I * 1e3, 2)} mA; P_R = ${fmt(c.P * 1e3, 1)} mW`); });
+$('bNote').addEventListener('click', () => { addCase('B · Divizor', $('bMode').value === 'ntc' ? `NTC, T = ${$('bT').value} °C, R_fix = ${$('bRf').value} kΩ` : `R1 = ${$('bR1').value} kΩ; R2 = ${$('bR2').value} kΩ; R_L = ${$('bNoLoad').checked ? '∞' : $('bRL').value + ' kΩ'}`, `U_out = ${$('bU0').textContent}; cu sarcină = ${$('bU1').textContent}; ${$('bErr').textContent}`); });
+$('cNote').addEventListener('click', () => { addCase('C · RC', `R = ${$('cR').selectedOptions[0].text}; C = ${$('cC').selectedOptions[0].text}`, `τ = ${$('cTau').textContent}; f_c = ${$('cFc').textContent}; t/u_C = ${$('cNow').textContent}`); });
+$('dNote').addEventListener('click', () => { if (!dLast) drawD(); addCase('D · Buton', `pull-up ${$('dPu').selectedOptions[0].text}; ${$('dRC').selectedOptions[0].text}; ${$('dEv').selectedOptions[0].text}`, `fronturi = ${$('dEdges').textContent}; I = ${$('dI').textContent}`); });
+$('eNote').addEventListener('click', () => { addCase('E · Cod culori', `${$('e1').selectedOptions[0].text}, ${$('e2').selectedOptions[0].text}, ${$('e3').selectedOptions[0].text}`, $('eVal').textContent); });
+$('clearCases').addEventListener('click', () => { if (cases.length && confirm('Ștergi toate cazurile notate?')) { cases = []; renderCases(); saveLocal(); status('caseStatus', 'Cazurile au fost șterse.', 'small'); } });
+$('csvOut').addEventListener('click', () => {
+  const head = ['CODE', 'VERSION', 'N', 'data_ora', 'experiment', 'parametri', 'rezultat'];
+  const rows = [head, ...cases.map(c => [CODE, VERSION, V.N, c.time, c.exp, c.params, c.result])];
+  download(`${codeOf(V)}_cazuri.csv`, toCSV(rows), 'text/csv;charset=utf-8');
+});
+
+// ---------- fisa ----------
+ANSWERS.forEach(a => $('answers').insertAdjacentHTML('beforeend', `<label>${esc(a.label)}<input id="${a.id}" inputmode="decimal"><div class="mark" id="${a.id}m" role="status"></div></label>`));
+$('checkAns').addEventListener('click', () => {
+  let ok = 0, filled = 0;
+  ANSWERS.forEach(a => {
+    const raw = $(a.id).value.trim(), m = $(a.id + 'm');
+    if (!raw) { m.textContent = ''; return; }
+    filled++;
+    const x = Number(raw.replace(',', '.')), t = a.key(V);
+    if (!Number.isFinite(x)) { m.textContent = 'Nu este un număr.'; m.className = 'mark error'; return; }
+    const good = Math.abs(x - t) <= Math.max(Math.abs(t) * a.tol, 1e-9);
+    if (good) ok++;
+    m.textContent = good ? 'Corect.' : 'Revizuiește calculul sau unitatea.';
+    m.className = 'mark ' + (good ? 'ok' : 'error');
+  });
+  status('sheetStatus', filled ? `${ok} din ${filled} completate sunt corecte. Verificare locală, nu notă.` : 'Completează cel puțin un răspuns.', filled && ok === filled ? 'ok' : 'small');
+  saveLocal();
+});
+$('printSheet').addEventListener('click', () => { showTab('t3'); window.print(); });
+function sheetData() {
+  const f = {}; ANSWERS.forEach(a => { f[a.id] = $(a.id).value; });
+  return { code: CODE, version: VERSION, N: V.N, group: $('groupIn').value, name: $('sName').value, sgroup: $('sGroup').value, answers: f, conclusions: $('concl').value, cases };
+}
+$('exportJSON').addEventListener('click', () => download(`${codeOf(V)}_fisa.json`, JSON.stringify(sheetData(), null, 2), 'application/json'));
+$('importJSON').addEventListener('change', ev => {
+  const file = ev.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (d.code !== CODE || d.version !== VERSION || validN(d.N) === null || typeof d.answers !== 'object' || !Array.isArray(d.cases)) throw new Error('structură');
+      applyN(d.N);
+      $('groupIn').value = String(d.group || ''); $('sName').value = String(d.name || ''); $('sGroup').value = String(d.sgroup || ''); $('concl').value = String(d.conclusions || '');
+      ANSWERS.forEach(a => { $(a.id).value = String(d.answers[a.id] ?? ''); });
+      cases = d.cases.filter(c => c && typeof c.exp === 'string').map(c => ({ exp: c.exp, params: String(c.params), result: String(c.result), time: String(c.time) }));
+      renderCases(); saveLocal(); renderVariant();
+      status('sheetStatus', 'Fișa a fost importată.', 'ok');
+    } catch (e) { status('sheetStatus', `Fișierul nu este o fișă ${CODE} v${VERSION} validă.`, 'error'); }
+    ev.target.value = '';
+  };
+  rd.readAsText(file);
+});
+
+// ---------- localStorage ----------
+const LS = () => `${CODE}-${VERSION}-N${V.N}`;
+function saveLocal() {
+  try { localStorage.setItem(LS(), JSON.stringify(sheetData())); } catch (e) { status('sheetStatus', 'Browserul nu permite salvarea locală; folosește exportul JSON.', 'small'); }
+}
+function restoreLocal() {
+  cases = [];
+  try {
+    const raw = localStorage.getItem(LS());
+    if (raw) {
+      const d = JSON.parse(raw);
+      $('sName').value = d.name || ''; $('sGroup').value = d.sgroup || ''; $('concl').value = d.conclusions || '';
+      ANSWERS.forEach(a => { $(a.id).value = (d.answers && d.answers[a.id]) || ''; });
+      cases = Array.isArray(d.cases) ? d.cases : [];
+    }
+  } catch (e) { /* fără salvare locală */ }
+  renderCases();
+}
+['sName', 'sGroup', 'concl'].forEach(id => $(id).addEventListener('change', saveLocal));
+
+// ---------- start ----------
+$('applyN').addEventListener('click', () => applyN($('nIn').value));
+$('exampleN').addEventListener('click', () => applyN(N_EXEMPLU));
+$('nIn').addEventListener('keydown', e => { if (e.key === 'Enter') applyN($('nIn').value); });
+$('groupIn').addEventListener('change', () => { if (V) renderVariant(); });
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(redraw, 150); });
+applyN(N_EXEMPLU);
+</script>
+</body>
+</html>
