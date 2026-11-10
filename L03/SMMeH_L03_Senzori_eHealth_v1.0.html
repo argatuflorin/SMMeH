@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMMeH · L03 · Senzori e-health</title>
+<style>
+:root { --ink:#111; --muted:#4b5563; --petrol:#0f766e; --petrol-dark:#115e59; --mint:#ddf3eb; --pale:#f3faf8; --line:#b8d5ce; --blue:#2563a6; --warn-bg:#fef3c7; --err:#a32121; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin:0; background:var(--pale); color:var(--ink); font:16px/1.6 system-ui,"Segoe UI",Arial,sans-serif; }
+main { max-width:1180px; margin:auto; padding:24px 24px 70px; }
+header { padding:26px 0 18px; border-bottom:3px solid var(--petrol); }
+.kicker { font-weight:700; font-size:14px; color:var(--petrol-dark); }
+h1 { font-size:clamp(30px,4vw,44px); line-height:1.12; margin:10px 0 12px; }
+h2 { font-size:25px; line-height:1.2; margin:0 0 14px; }
+h3 { font-size:19px; margin:18px 0 8px; }
+.lead { font-size:19px; max-width:880px; margin:0 0 8px; }
+.small { font-size:14px; color:var(--muted); }
+.note { background:var(--mint); padding:13px 16px; border-radius:10px; }
+.warn { background:var(--warn-bg); color:#3b2306; padding:12px 16px; border-radius:10px; }
+.ok { color:#14603d; font-weight:650; }
+.error { color:var(--err); font-weight:650; }
+.variant { background:white; border:2px solid var(--petrol); border-radius:14px; padding:18px 20px; margin:20px 0; }
+.row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+.row label { min-width:160px; }
+.tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.tabs button { background:white; border:1px solid var(--line); border-bottom:0; border-radius:9px 9px 0 0; padding:11px 16px; font-weight:650; }
+.tabs button[aria-selected="true"] { background:var(--petrol); color:white; border-color:var(--petrol); }
+.panel { background:white; border:1px solid var(--line); border-radius:0 12px 12px 12px; padding:24px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; }
+.fields .wide { grid-column:1 / -1; }
+label { display:block; font-size:14px; font-weight:650; }
+input, select, textarea { display:block; width:100%; font:inherit; padding:8px 9px; border:1px solid #8eaaa4; border-radius:6px; background:white; color:var(--ink); margin-top:3px; }
+textarea { min-height:70px; }
+.bad input, .bad textarea, .bad select { border-color:var(--err); background:#fff7f7; }
+.hint { font-size:12.5px; font-weight:400; color:var(--muted); }
+.fieldmsg { font-size:12.5px; color:var(--err); min-height:16px; font-weight:500; }
+button { font:650 14px system-ui,Arial,sans-serif; padding:10px 14px; border:1px solid var(--petrol); border-radius:7px; background:var(--mint); color:var(--ink); cursor:pointer; }
+button.primary { background:var(--petrol); color:white; }
+button.danger { border-color:var(--err); background:#fdecec; }
+button[aria-pressed="true"] { background:var(--petrol); color:white; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+.buttons { display:flex; gap:9px; flex-wrap:wrap; margin:14px 0; }
+.sensors { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.progress { height:12px; background:#e5efec; border-radius:6px; overflow:hidden; margin:6px 0 4px; }
+.progress div { height:100%; background:var(--petrol); width:0; }
+.metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0; }
+.metric { padding:11px 12px; background:var(--pale); border:1px solid var(--line); border-radius:8px; font-size:14px; }
+.metric b { display:block; font-size:21px; }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:12px 0; }
+td, th { padding:7px 9px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+th { background:var(--mint); }
+.overflow { overflow-x:auto; }
+details { padding:10px 14px; border:1px solid var(--line); border-radius:8px; margin:10px 0; background:white; }
+summary { font-weight:650; cursor:pointer; }
+.checklist li { margin:4px 0; }
+.chip { display:inline-block; padding:3px 10px; border-radius:20px; background:var(--mint); border:1px solid var(--line); font-size:13px; margin:2px 4px 2px 0; }
+.chip.req { background:#fde68a; border-color:#d97706; }
+footer { font-size:13px; color:var(--muted); margin-top:28px; }
+#report { display:none; }
+@media (max-width:760px){ main{padding:14px} .panel{padding:16px} .grid,.fields{grid-template-columns:1fr} .metrics{grid-template-columns:1fr 1fr} }
+@media print {
+  body { background:white; font:11pt/1.4 Georgia,serif; }
+  main > *:not(#report) { display:none !important; }
+  #report { display:block !important; }
+  #report table { font-size:9.5pt; }
+  #report h2 { font-size:15pt; margin-top:14pt; }
+  #report .sensor { break-inside:avoid-page; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="kicker">SMMeH · L03 · Masterat TIMM · 2026–2027 · versiunea 1.0 · însoțește cursul C03</div>
+  <h1>Senzori pentru monitorizare e-health: fișa senzorului</h1>
+  <p class="lead">Cercetare documentară asistată: completezi fișa pentru minimum cinci senzori, aplicația verifică ce lipsește, construiește tabelul comparativ și pregătește raportul pentru tipărire.</p>
+  <p class="small">Sisteme de măsurare și monitorizare e-health · Florin Ciprian Argatu</p>
+  <p class="note"><b>Instrument de lucru, nu sursă de date.</b> Aplicația nu conține specificații de senzori și nu le inventează: valorile le iei din fișele tehnice ale producătorilor și le citezi. Verificările sunt de formă (câmpuri completate, unități, surse), nu de corectitudine tehnică.</p>
+</header>
+
+<section class="variant" aria-labelledby="vTitle">
+  <h2 id="vTitle" style="font-size:21px">Varianta individuală</h2>
+  <div class="row">
+    <label>Indice N (1–42)<input id="nIn" type="number" min="1" max="42" step="1" value="7"></label>
+    <label>Nume și prenume<input id="sName" maxlength="80"></label>
+    <label>Grupa<input id="sGroup" maxlength="24"></label>
+    <button id="applyN" class="primary">Aplică varianta N</button>
+    <label>Cod variantă<input id="codeOut" readonly></label>
+  </div>
+  <p id="nStatus" role="status" class="error"></p>
+  <p id="reqOut"></p>
+</section>
+
+<div class="tabs" role="tablist" aria-label="Secțiunile aplicației">
+  <button role="tab" id="t1" aria-controls="p1" aria-selected="true">1 · Începe aici</button>
+  <button role="tab" id="t2" aria-controls="p2" aria-selected="false">2 · Fișele senzorilor</button>
+  <button role="tab" id="t3" aria-controls="p3" aria-selected="false">3 · Tabel, surse, analiză</button>
+  <button role="tab" id="t4" aria-controls="p4" aria-selected="false">4 · Breviar</button>
+</div>
+
+<!-- 1 -->
+<section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+  <h2>Ce ai de făcut</h2>
+  <div class="grid">
+    <div>
+      <ol>
+        <li>Aplică N. Primești două categorii obligatorii de senzori; celelalte trei (sau mai multe) le alegi tu, din categorii diferite.</li>
+        <li>Pentru fiecare senzor, caută fișa tehnică la producător și completează cele 15 câmpuri din fila 2. Fiecare valoare numerică are unitate.</li>
+        <li>În fila 3 adaugă sursele (minimum 5: cel puțin o fișă tehnică, un articol științific, o sursă despre integrarea în embedded/IoT) și trimite la ele din fiecare fișă, cu [1], [2]…</li>
+        <li>Răspunde la cele cinci întrebări de analiză și scrie concluziile.</li>
+        <li>Când indicatorul de completare ajunge la 100 %, apasă „Tipărește raportul” și salvează PDF-ul.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Ce predai</h3>
+      <p><code>SMMeH_L03_Nxx_Nume_Prenume.pdf</code> (5–8 pagini fără bibliografie) generat din fila 3, plus fișierul JSON exportat. Simpla enumerare a senzorilor nu este suficientă: se urmărește relația mărime fiziologică – traductor – caracteristici metrologice – achiziție – comunicație IoT – aplicație e-health.</p>
+      <p class="warn">Lucrul se salvează automat doar în acest browser. Exportă JSON la final de sesiune; poți reîncărca lucrul cu „Importă JSON”.</p>
+      <p class="small">Exemplu de fișă completă: butonul „Încarcă exemplul MAX30205” din fila 2 (preluat din cursul C03). Exemplul este pentru format și nu se predă.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+  <h2>Fișele senzorilor</h2>
+  <div class="progress" aria-hidden="true"><div id="progBar"></div></div>
+  <p id="progTxt" class="small" role="status"></p>
+  <div class="sensors" id="sensorTabs" role="group" aria-label="Senzori"></div>
+  <div class="buttons">
+    <button id="addSensor">Adaugă senzor</button>
+    <button id="exampleSensor">Încarcă exemplul MAX30205</button>
+    <button id="delSensor" class="danger">Șterge senzorul curent</button>
+  </div>
+  <div class="fields" id="form"></div>
+</section>
+
+<!-- 3 -->
+<section class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+  <h2>Tabel comparativ</h2>
+  <div class="overflow"><table id="cmp"></table></div>
+  <div class="buttons"><button id="csvOut">Exportă tabelul CSV</button></div>
+  <h2>Surse bibliografice</h2>
+  <div class="overflow"><table id="bibT"></table></div>
+  <div class="row">
+    <label style="min-width:180px">Tip<select id="bibType"><option value="datasheet">fișă tehnică / datasheet</option><option value="articol">articol științific</option><option value="integrare">integrare embedded / IoT</option><option value="alta">altă sursă tehnică</option></select></label>
+    <label style="flex:1">Referința (autori, titlu, editură/revistă, an)<input id="bibText"></label>
+    <label style="flex:1">Link<input id="bibUrl" placeholder="https://"></label>
+    <button id="bibAdd">Adaugă sursa</button>
+  </div>
+  <p id="bibMsg" class="small" role="status"></p>
+  <h2>Analiză finală</h2>
+  <div class="fields" id="analysis"></div>
+  <h2>Verificare înainte de predare</h2>
+  <ul class="checklist" id="checks"></ul>
+  <div class="metrics">
+    <div class="metric">Senzori completați<b id="mS">—</b></div>
+    <div class="metric">Categorii diferite<b id="mC">—</b></div>
+    <div class="metric">Surse / tipuri<b id="mB">—</b></div>
+    <div class="metric">Completare totală<b id="mP">—</b></div>
+  </div>
+  <div class="buttons">
+    <button id="printRep" class="primary">Tipărește raportul / salvează PDF</button>
+    <button id="exportJSON">Exportă JSON</button>
+    <label style="font-weight:650;align-self:center">Importă JSON<input id="importJSON" type="file" accept="application/json"></label>
+  </div>
+  <p id="ioMsg" role="status"></p>
+</section>
+
+<!-- 4 -->
+<section class="panel" id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+  <h2>Breviar</h2>
+  <details open><summary>Parametri metrologici (vocabular)</summary>
+    <p><b>Domeniu</b> – valorile pentru care senzorul este specificat. <b>Rezoluție</b> – cea mai mică variație afișabilă. <b>Exactitate (precizie în limbaj curent)</b> – abaterea maximă față de valoarea adevărată; se raportează cu intervalul în care este valabilă (de ex. ±0,1 °C între 37 și 39 °C). <b>Sensibilitate</b> – variația ieșirii la o variație unitară a mărimii (mV/°C, LSB/g). <b>Timp de răspuns / conversie</b> – cât durează până la o valoare nouă. Rezoluția nu este exactitate.</p>
+  </details>
+  <details><summary>Interfețe și conectare la ESP32</summary>
+    <p>Analogic → ADC1 (GPIO32–39 la ESP32 clasic; ADC2 nu se folosește cu Wi-Fi). I²C → SDA/SCL (GPIO21/22), adrese diferite, pull-up 4,7 kΩ. 1-Wire → un GPIO + pull-up. SPI → MOSI/MISO/SCK/CS. UART → TX/RX. Verifică tensiunea de alimentare (3,3 V) și nivelurile logice.</p>
+  </details>
+  <details><summary>Exemple de senzori din cursul C03</summary>
+    <p>Temperatură: NTC, DS18B20, MAX30205, termometre IR. PPG/SpO₂: MAX30102. ECG: AD8232. Mișcare: MPU-6050, LSM6DS3. Ambient: DHT22. Folosește-le ca punct de plecare, nu ca listă închisă.</p>
+  </details>
+  <details><summary>Reglementare</summary>
+    <p>Wellness vs dispozitiv medical: decide scopul declarat de producător (Regulamentul UE 2017/745). Standarde: IEC 60601-1, ISO 80601-2-61 (pulsoximetre), ISO 80601-2-56 (termometre clinice), IEC 60601-2-47 (ECG ambulator).</p>
+  </details>
+  <details><summary>Regula categoriilor după N</summary>
+    <p>Categoriile sunt numerotate 0–13 în ordinea din îndrumar. Obligatorii: c₁ = N mod 14 și c₂ = (5N + 3) mod 14; dacă c₂ = c₁, se ia c₂ = (c₁ + 7) mod 14.</p>
+  </details>
+</section>
+
+<section id="report" aria-hidden="true"></section>
+
+<footer>Florin Ciprian Argatu · SMMeH · anul universitar 2026–2027 · <span id="verOut"></span> · Aplicația rulează local, nu transmite date și nu acordă note.</footer>
+</main>
+
+<script>
+'use strict';
+const VERSION = '1.0', CODE = 'SMMeH-L03', N_MIN = 1, N_MAX = 42;
+const $ = id => document.getElementById(id);
+const CATS = ['temperatura corporală','puls și fotopletismografie (PPG)','saturația de oxigen (SpO₂)','ECG','tensiune arterială','respirație','EMG','EEG','conductanța pielii (GSR/EDA)','accelerometre și giroscoape (mișcare, căderi)','presiune','glucoză','bioimpedanță','umiditate (medical / wearable)'];
+const FIELDS = [
+  { k:'cat', l:'Categoria', t:'cat' },
+  { k:'name', l:'1. Denumirea senzorului și parametrul măsurat (cu unitatea)', h:'ex. MAX30205 – temperatura corpului, °C' },
+  { k:'principle', l:'2. Principiul de funcționare', h:'optic, rezistiv, capacitiv, piezoelectric, electrochimic, termoelectric…' },
+  { k:'range', l:'3. Domeniul de măsurare', h:'minim … maxim, cu unitate', num:true },
+  { k:'resolution', l:'4. Rezoluția', num:true },
+  { k:'accuracy', l:'5. Precizia / eroarea de măsurare', h:'cu intervalul în care este valabilă', num:true },
+  { k:'sensitivity', l:'6. Sensibilitatea', h:'sau „nespecificată în fișă”', num:true, allowNS:true },
+  { k:'response', l:'7. Timpul de răspuns / conversie', num:true, allowNS:true },
+  { k:'sampling', l:'8. Frecvența de eșantionare (dacă este relevantă)', num:true, allowNS:true },
+  { k:'power', l:'9. Tensiunea de alimentare și consumul', num:true },
+  { k:'out', l:'10. Tipul semnalului de ieșire', t:'sel', o:['','analogic','digital','analogic și digital'] },
+  { k:'iface', l:'11. Interfața de comunicație', t:'sel', o:['','ADC (analogic)','I²C','SPI','UART','1-Wire','single-bus proprietar','altă interfață'] },
+  { k:'iot', l:'12. Conectarea la platforme IoT (ESP32, Arduino, Raspberry Pi…)', h:'pini, nivel logic, biblioteci' },
+  { k:'model', l:'13. Exemplu comercial – model și producător' },
+  { k:'apps', l:'14. Aplicații e-health (minimum două, separate prin ;)', t:'ta' },
+  { k:'pros', l:'15. Avantaje și limitări', t:'ta', h:'precizie, cost, consum, dimensiuni, mișcare, calibrare, mediu' },
+  { k:'refs', l:'Surse folosite pentru această fișă', h:'ex. [1], [3]' }
+];
+const QUESTIONS = [
+  'Ce caracteristici sunt cele mai importante pentru alegerea unui senzor destinat unui sistem e-health?',
+  'Este mai importantă precizia sau consumul energetic într-un dispozitiv wearable? Argumentați.',
+  'Care dintre senzorii analizați este cel mai ușor de integrat într-un sistem IoT? De ce?',
+  'Ce probleme pot apărea la transmiterea și interpretarea datelor biomedicale?',
+  'Care dintre senzorii studiați ar putea fi utilizat într-un sistem de monitorizare medicală la distanță?',
+  'Concluzii (minimum trei, fiecare susținută de un rezultat din tabel)'
+];
+const EXAMPLE = { cat:'0', name:'MAX30205 – temperatura corpului, °C', principle:'senzor de temperatură integrat (joncțiune semiconductoare) cu ADC sigma-delta', range:'0 … 50 °C', resolution:'16 biți: 0,00390625 °C', accuracy:'±0,1 °C între 37 și 39 °C; ±0,3 °C între 15 și 35,8 °C', sensitivity:'nespecificată în fișă (ieșire digitală)', response:'conversie tipic 44 ms (max. 50 ms)', sampling:'nespecificată (la cerere, mod one-shot)', power:'2,7 … 3,3 V; 600 µA tipic', out:'digital', iface:'I²C', iot:'ESP32: SDA GPIO21, SCL GPIO22, pull-up 4,7 kΩ la 3V3', model:'MAX30205, Maxim Integrated / Analog Devices', apps:'termometru purtabil pentru urmărirea febrei; plasture de monitorizare post-operatorie', pros:'exactitate foarte bună în domeniul febrei; consum mic; cere contact termic bun și izolare față de aer; alimentare max. 3,3 V', refs:'[EX1]' };
+
+let N = null, sensors = [], cur = 0, bib = [], answers = QUESTIONS.map(() => '');
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+function validN(v){ const n = Number(v); return (String(v).trim() !== '' && Number.isInteger(n) && n >= N_MIN && n <= N_MAX) ? n : null; }
+function reqCats(n){ const c1 = n % 14; let c2 = (5 * n + 3) % 14; if (c2 === c1) c2 = (c1 + 7) % 14; return [c1, c2]; }
+function codeOf(){ return `${CODE}-N${String(N).padStart(2,'0')}-v${VERSION}`; }
+function blank(){ const s = {}; FIELDS.forEach(f => s[f.k] = ''); return s; }
+
+// ---- validare câmp
+const hasNum = t => /\d/.test(t);
+const hasUnit = t => /(°C|%|bpm|mmHg|Hz|kHz|ms|µs|us|s\b|V\b|mV|µV|A\b|mA|µA|uA|W\b|mW|µW|g\b|°\/s|Ω|kΩ|bit|biți|LSB|nm|mg\/dL|mmol|kPa|Pa|SpO|ppm|m\/s)/i.test(t);
+function fieldIssue(f, v, s){
+  v = String(v || '').trim();
+  if (!v) return 'necompletat';
+  if (f.num){
+    if (f.allowNS && /nespecificat|nu este specificat|nu se aplică|la cerere/i.test(v)) return '';
+    if (!hasNum(v)) return 'lipsește valoarea numerică';
+    if (!hasUnit(v)) return 'lipsește unitatea';
+  }
+  if (f.k === 'name' && !hasUnit(v) && !/[,–-]/.test(v)) return 'adăugați parametrul măsurat și unitatea';
+  if (f.k === 'apps' && v.split(/[;\n]/).map(x => x.trim()).filter(Boolean).length < 2) return 'minimum două aplicații, separate prin ;';
+  if (f.k === 'refs' && !/\[\w+\]/.test(v)) return 'trimiteți la sursele din fila 3, ex. [1]';
+  if (f.k === 'refs'){
+    const ids = (v.match(/\[(\w+)\]/g) || []).map(x => x.slice(1, -1));
+    const bad = ids.filter(id => !(id === 'EX1' && isExample(s)) && !(Number(id) >= 1 && Number(id) <= bib.length));
+    if (bad.length) return 'sursă inexistentă: [' + bad.join('], [') + ']';
+  }
+  return '';
+}
+const isExample = s => s && s.refs === '[EX1]' && s.name === EXAMPLE.name;
+function sensorScore(s){ let ok = 0; FIELDS.forEach(f => { if (!fieldIssue(f, s[f.k], s)) ok++; }); return ok / FIELDS.length; }
+
+// ---- render variant
+function applyN(v){
+  const n = validN(v);
+  if (n === null){ $('nStatus').textContent = `Introdu un N întreg între ${N_MIN} și ${N_MAX}.`; return false; }
+  $('nStatus').textContent = '';
+  if (N !== null && n !== N) { save(); }
+  N = n; $('nIn').value = n; $('codeOut').value = codeOf(); $('verOut').textContent = `${CODE} v${VERSION}`;
+  const [a, b] = reqCats(n);
+  $('reqOut').innerHTML = 'Categorii obligatorii pentru N = ' + n + ': <span class="chip req">' + esc(CATS[a]) + '</span><span class="chip req">' + esc(CATS[b]) + '</span> Celelalte senzori se aleg din alte categorii, diferite între ele.';
+  load(); renderAll(); return true;
+}
+
+// ---- sensor form
+function renderTabs(){
+  $('sensorTabs').innerHTML = sensors.map((s, i) => `<button data-i="${i}" aria-pressed="${i === cur}">${i + 1}. ${esc((s.name || 'senzor nou').split(/[–-]/)[0].trim().slice(0, 24))} · ${Math.round(sensorScore(s) * 100)} %</button>`).join('');
+  $('sensorTabs').querySelectorAll('button').forEach(b => b.onclick = () => { cur = Number(b.dataset.i); renderForm(); renderTabs(); });
+}
+function renderForm(){
+  const s = sensors[cur];
+  $('form').innerHTML = FIELDS.map(f => {
+    let ctl;
+    if (f.t === 'cat') ctl = `<select data-k="cat"><option value="">— alegeți —</option>${CATS.map((c, i) => `<option value="${i}" ${String(s.cat) === String(i) ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>`;
+    else if (f.t === 'sel') ctl = `<select data-k="${f.k}">${f.o.map(o => `<option ${s[f.k] === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+    else if (f.t === 'ta') ctl = `<textarea data-k="${f.k}">${esc(s[f.k])}</textarea>`;
+    else ctl = `<input data-k="${f.k}" value="${esc(s[f.k])}">`;
+    const wide = (f.t === 'ta' || f.k === 'name' || f.k === 'iot' || f.k === 'principle') ? ' wide' : '';
+    return `<label class="fld${wide}" id="f_${f.k}">${esc(f.l)}${f.h ? ` <span class="hint">(${esc(f.h)})</span>` : ''}${ctl}<span class="fieldmsg" id="m_${f.k}"></span></label>`;
+  }).join('');
+  $('form').querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => { sensors[cur][el.dataset.k] = el.value; markFields(); renderTabs(); progress(); save(); }));
+  markFields();
+}
+function markFields(){
+  const s = sensors[cur];
+  FIELDS.forEach(f => { const m = fieldIssue(f, s[f.k], s); $('m_' + f.k).textContent = m; $('f_' + f.k).classList.toggle('bad', !!m && !!String(s[f.k] || '').trim()); });
+}
+function progress(){
+  const p = overall();
+  $('progBar').style.width = Math.round(p.total * 100) + '%';
+  $('progTxt').textContent = `Completare totală ${Math.round(p.total * 100)} % · senzori complet: ${p.full} din minimum 5 · categorii diferite: ${p.cats} · obligatorii acoperite: ${p.reqOk}/2`;
+}
+function overall(){
+  const full = sensors.filter(s => sensorScore(s) === 1).length;
+  const catsUsed = sensors.filter(s => s.cat !== '').map(s => Number(s.cat));
+  const cats = new Set(catsUsed).size;
+  const [a, b] = reqCats(N); const reqOk = [a, b].filter(c => catsUsed.includes(c)).length;
+  const types = new Set(bib.map(x => x.type));
+  const bibOk = bib.length >= 5 && ['datasheet','articol','integrare'].every(t => types.has(t));
+  const ansOk = answers.filter(x => x.trim().length >= 40).length;
+  const exampleOnly = sensors.some(isExample);
+  const sScore = Math.min(5, sensors.reduce((acc, s) => acc + (isExample(s) ? 0 : sensorScore(s)), 0)) / 5;
+  const total = 0.6 * sScore + 0.1 * Math.min(cats, 5) / 5 + 0.1 * (reqOk / 2) + 0.1 * (bibOk ? 1 : Math.min(bib.length, 5) / 6) + 0.1 * ansOk / QUESTIONS.length;
+  return { full, cats, reqOk, bibOk, ansOk, types, total: Math.min(1, total), exampleOnly };
+}
+
+// ---- comparative table, bib, analysis, checks
+function renderCmp(){
+  const head = ['#','Senzor','Parametru măsurat','Domeniu','Precizie','Rezoluție','Interfață','Alimentare','Aplicație e-health'];
+  $('cmp').innerHTML = '<tr>' + head.map(h => `<th>${h}</th>`).join('') + '</tr>' + (sensors.map((s, i) => { const [nm, ...rest] = String(s.name).split(/\s[–-]\s/); return `<tr><td>${i + 1}</td><td>${esc(nm)}${isExample(s) ? ' <span class="chip">exemplu</span>' : ''}</td><td>${esc(rest.join(' – '))}</td><td>${esc(s.range)}</td><td>${esc(s.accuracy)}</td><td>${esc(s.resolution)}</td><td>${esc(s.iface)}</td><td>${esc(s.power)}</td><td>${esc(String(s.apps).split(';')[0])}</td></tr>`; }).join('') || '<tr><td colspan="9">Niciun senzor.</td></tr>');
+}
+const TYPE_L = { datasheet:'fișă tehnică', articol:'articol științific', integrare:'integrare embedded / IoT', alta:'altă sursă' };
+function renderBib(){
+  $('bibT').innerHTML = '<tr><th>[n]</th><th>Tip</th><th>Referința</th><th>Link</th><th></th></tr>' + (bib.map((b, i) => `<tr><td>[${i + 1}]</td><td>${TYPE_L[b.type]}</td><td>${esc(b.text)}</td><td>${b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.url.slice(0, 50))}</a>` : '—'}</td><td><button data-del="${i}">Șterge</button></td></tr>`).join('') || '<tr><td colspan="5">Nicio sursă.</td></tr>');
+  $('bibT').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { bib.splice(Number(b.dataset.del), 1); renderAll(); save(); });
+}
+function renderAnalysis(){
+  $('analysis').innerHTML = QUESTIONS.map((q, i) => `<label class="wide">${i + 1}. ${esc(q)}<textarea data-q="${i}">${esc(answers[i])}</textarea></label>`).join('');
+  $('analysis').querySelectorAll('[data-q]').forEach(t => t.addEventListener('input', () => { answers[Number(t.dataset.q)] = t.value; checks(); save(); }));
+}
+function checks(){
+  const p = overall();
+  const items = [
+    [p.full - (sensors.some(s => isExample(s) && sensorScore(s) === 1) ? 1 : 0) >= 5, `cel puțin 5 senzori proprii completați integral (acum ${p.full - (sensors.some(s => isExample(s) && sensorScore(s) === 1) ? 1 : 0)})`],
+    [p.cats >= 5, `senzori din cel puțin 5 categorii diferite (acum ${p.cats})`],
+    [p.reqOk === 2, 'ambele categorii obligatorii ale variantei sunt acoperite'],
+    [p.bibOk, 'minimum 5 surse, inclusiv o fișă tehnică, un articol științific și o sursă despre integrarea IoT'],
+    [p.ansOk === QUESTIONS.length, `răspunsuri dezvoltate la toate întrebările (acum ${p.ansOk}/${QUESTIONS.length})`],
+    [!p.exampleOnly, 'exemplul MAX30205 a fost șters sau înlocuit (nu se predă)'],
+    [$('sName').value.trim() && $('sGroup').value.trim(), 'numele și grupa sunt completate']
+  ];
+  $('checks').innerHTML = items.map(([ok, t]) => `<li class="${ok ? 'ok' : 'error'}">${ok ? '✓' : '✗'} ${esc(t)}</li>`).join('');
+  $('mS').textContent = `${p.full} / 5`; $('mC').textContent = String(p.cats);
+  $('mB').textContent = `${bib.length} / ${p.types.size}`; $('mP').textContent = Math.round(p.total * 100) + ' %';
+}
+function renderAll(){ if (!sensors.length) sensors.push(blank()); cur = Math.min(cur, sensors.length - 1); renderTabs(); renderForm(); progress(); renderCmp(); renderBib(); renderAnalysis(); checks(); }
+
+// ---- report for print
+function buildReport(){
+  const p = overall();
+  const rows = sensors.map((s, i) => `<div class="sensor"><h2>${i + 1}. ${esc(s.name)}</h2><table>${FIELDS.slice(1).map(f => `<tr><th style="width:32%">${esc(f.l)}</th><td>${esc(s[f.k])}</td></tr>`).join('')}<tr><th>Categoria</th><td>${esc(CATS[s.cat] || '')}</td></tr></table></div>`).join('');
+  $('report').innerHTML = `<h1 style="font-size:20pt">Cercetare privind principalii senzori utilizați în sisteme e-health</h1>
+  <p>${esc($('sName').value)} · grupa ${esc($('sGroup').value)} · ${esc(codeOf())} · SMMeH L03 · ${new Date().toLocaleDateString('ro-RO')}</p>
+  <p>Categorii obligatorii: ${reqCats(N).map(c => esc(CATS[c])).join(', ')}. Completare: ${Math.round(p.total * 100)} %.</p>
+  ${rows}
+  <h2>Tabel comparativ</h2>${$('cmp').outerHTML}
+  <h2>Analiză finală</h2>${QUESTIONS.map((q, i) => `<p><b>${i + 1}. ${esc(q)}</b><br>${esc(answers[i]).replace(/\n/g, '<br>')}</p>`).join('')}
+  <h2>Bibliografie</h2>${bib.map((b, i) => `<p>[${i + 1}] ${esc(b.text)}${b.url ? ' ' + esc(b.url) : ''} (${TYPE_L[b.type]})</p>`).join('')}`;
+}
+
+// ---- storage
+const LS = () => `${CODE}-${VERSION}-N${N}`;
+function data(){ return { code: CODE, version: VERSION, N, name: $('sName').value, group: $('sGroup').value, sensors, bib, answers }; }
+function save(){ try { localStorage.setItem(LS(), JSON.stringify(data())); } catch (e) { $('ioMsg').textContent = 'Browserul nu permite salvarea locală; folosiți exportul JSON.'; } }
+function load(){
+  sensors = []; bib = []; answers = QUESTIONS.map(() => ''); cur = 0;
+  try { const raw = localStorage.getItem(LS()); if (raw) { const d = JSON.parse(raw); sensors = d.sensors || []; bib = d.bib || []; answers = (d.answers || answers).slice(0, QUESTIONS.length); while (answers.length < QUESTIONS.length) answers.push(''); if (d.name) $('sName').value = d.name; if (d.group) $('sGroup').value = d.group; } } catch (e) { }
+}
+function download(name, content, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+
+// ---- events
+const tabs = ['t1','t2','t3','t4'];
+tabs.forEach(t => $(t).addEventListener('click', () => { tabs.forEach(x => { $(x).setAttribute('aria-selected', String(x === t)); $('p' + x.slice(1)).hidden = x !== t; }); if (t === 't3') { renderCmp(); renderBib(); checks(); } }));
+$('applyN').onclick = () => applyN($('nIn').value);
+$('nIn').addEventListener('keydown', e => { if (e.key === 'Enter') applyN($('nIn').value); });
+['sName','sGroup'].forEach(id => $(id).addEventListener('change', () => { save(); checks(); }));
+$('addSensor').onclick = () => { sensors.push(blank()); cur = sensors.length - 1; renderAll(); save(); };
+$('exampleSensor').onclick = () => { if (sensors.some(isExample)) return; const s = Object.assign(blank(), EXAMPLE); const empty = sensors.findIndex(x => FIELDS.every(f => !String(x[f.k] || '').trim())); if (empty >= 0) sensors[empty] = s; else sensors.push(s); cur = sensors.indexOf(s); renderAll(); save(); };
+$('delSensor').onclick = () => { if (confirm('Ștergeți senzorul curent?')) { sensors.splice(cur, 1); cur = Math.max(0, cur - 1); renderAll(); save(); } };
+$('bibAdd').onclick = () => {
+  const text = $('bibText').value.trim(), url = $('bibUrl').value.trim();
+  if (text.length < 10) { $('bibMsg').textContent = 'Completați referința (autori, titlu, editură/revistă, an).'; $('bibMsg').className = 'error'; return; }
+  if (url && !/^https?:\/\/\S+$/i.test(url)) { $('bibMsg').textContent = 'Linkul trebuie să înceapă cu http:// sau https://.'; $('bibMsg').className = 'error'; return; }
+  bib.push({ type: $('bibType').value, text, url }); $('bibText').value = ''; $('bibUrl').value = ''; $('bibMsg').textContent = `Sursa a fost adăugată ca [${bib.length}].`; $('bibMsg').className = 'small';
+  renderAll(); save();
+};
+$('csvOut').onclick = () => {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const rows = [['N','senzor','categorie','domeniu','precizie','rezolutie','interfata','alimentare','aplicatii','surse'], ...sensors.map(s => [N, s.name, CATS[s.cat] || '', s.range, s.accuracy, s.resolution, s.iface, s.power, s.apps, s.refs])];
+  download(`${codeOf()}_tabel.csv`, '\ufeff' + rows.map(r => r.map(q).join(';')).join('\r\n'), 'text/csv;charset=utf-8');
+};
+$('printRep').onclick = () => { buildReport(); window.print(); };
+$('exportJSON').onclick = () => download(`${codeOf()}_fisa.json`, JSON.stringify(data(), null, 2), 'application/json');
+$('importJSON').addEventListener('change', ev => {
+  const file = ev.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (d.code !== CODE || validN(d.N) === null || !Array.isArray(d.sensors) || !Array.isArray(d.bib)) throw new Error('structură');
+      N = d.N; $('nIn').value = N; $('codeOut').value = codeOf();
+      sensors = d.sensors.map(s => { const b = blank(); FIELDS.forEach(f => b[f.k] = String(s[f.k] ?? '')); return b; });
+      bib = d.bib.filter(b => b && TYPE_L[b.type]).map(b => ({ type: b.type, text: String(b.text), url: /^https?:\/\//i.test(String(b.url)) ? String(b.url) : '' }));
+      answers = QUESTIONS.map((_, i) => String((d.answers || [])[i] ?? ''));
+      $('sName').value = String(d.name || ''); $('sGroup').value = String(d.group || '');
+      save(); applyN(N); $('ioMsg').textContent = 'Fișa a fost importată.'; $('ioMsg').className = 'ok';
+    } catch (e) { $('ioMsg').textContent = `Fișierul nu este o fișă ${CODE} validă.`; $('ioMsg').className = 'error'; }
+    ev.target.value = '';
+  };
+  rd.readAsText(file);
+});
+window.addEventListener('beforeprint', buildReport);
+applyN(7);
+</script>
+</body>
+</html>
