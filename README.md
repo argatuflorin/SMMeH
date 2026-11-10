@@ -10,6 +10,7 @@ Florin Ciprian Argatu · 2026–2027. Denumiri conform STANDARD DENUMIRI ACADEMI
 | L02 | Componente de circuit (însoțește cursul C02) | [SMMeH_L02_Componente_Circuit_v1.0.html](L02/SMMeH_L02_Componente_Circuit_v1.0.html) |
 | L03 | Senzori e-health – cercetare documentară (însoțește cursul C03) | [SMMeH_L03_Senzori_eHealth_v1.0.html](L03/SMMeH_L03_Senzori_eHealth_v1.0.html) |
 | L04 | Comunicația HTTP între două ESP32 (însoțește cursul C05) | [SMMeH_L04_Comunicatie_HTTP_v1.0.html](L04/SMMeH_L04_Comunicatie_HTTP_v1.0.html) |
+| L05 | Achiziția datelor cu ESP32 (însoțește cursul C04) | [SMMeH_L05_Achizitie_Date_ESP32_v1.0.html](L05/SMMeH_L05_Achizitie_Date_ESP32_v1.0.html) |
 
 **[Deschide Virtual Laboratory](https://argatuflorin.github.io/SMMeH/)**
 
