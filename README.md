@@ -11,6 +11,7 @@ Florin Ciprian Argatu · 2026–2027. Denumiri conform STANDARD DENUMIRI ACADEMI
 | L03 | Senzori e-health – cercetare documentară (însoțește cursul C03) | [SMMeH_L03_Senzori_eHealth_v1.0.html](L03/SMMeH_L03_Senzori_eHealth_v1.0.html) |
 | L04 | Achiziția datelor cu ESP32 (însoțește cursul C04) | [SMMeH_L04_Achizitie_Date_ESP32_v1.0.html](L04/SMMeH_L04_Achizitie_Date_ESP32_v1.0.html) |
 | L05 | Comunicația HTTP între două ESP32 (însoțește cursul C05) | [SMMeH_L05_Comunicatie_HTTP_v1.0.html](L05/SMMeH_L05_Comunicatie_HTTP_v1.0.html) |
+| L06 | Puls transmis prin Bluetooth Low Energy (însoțește cursul C06) | [SMMeH_L06_Puls_BLE_v1.0.html](L06/SMMeH_L06_Puls_BLE_v1.0.html) |
 
 **[Deschide Virtual Laboratory](https://argatuflorin.github.io/SMMeH/)**
 

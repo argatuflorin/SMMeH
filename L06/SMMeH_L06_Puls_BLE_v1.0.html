@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMMeH · L06 · Puls transmis prin BLE</title>
+<style>
+:root {
+  --v: #0e7490; --p: #ecfeff; --teal: #be185d; --line: #cfe4e8;
+  --adv: #7c3aed; --ok: #26713c; --old: #996d00; --bad: #ad2424;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #fff; color: #000; font: 16px/1.65 system-ui, Arial, sans-serif; }
+main { max-width: 1160px; margin: auto; padding: 30px 24px 65px; }
+h1 { font-size: clamp(28px, 4vw, 43px); line-height: 1.17; margin: 14px 0; }
+h2 { font-size: 25px; margin: 0 0 16px; }
+h3 { font-size: 19px; }
+header { padding: 28px 0; border-bottom: 3px solid var(--v); }
+.eyebrow { font-size: 13px; font-weight: 750; letter-spacing: .08em; }
+.lead { max-width: 850px; font-size: 18px; }
+nav { display: flex; gap: 10px; flex-wrap: wrap; margin: 22px 0; }
+nav a { padding: 7px 12px; background: var(--p); text-decoration: none; border-radius: 7px; color: #000; }
+section { padding: 28px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 15px; }
+.note { padding: 14px 18px; background: var(--p); border-radius: 10px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.controlgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+label { display: block; font-size: 14px; font-weight: 650; }
+label.inline { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+label.inline input { width: auto; display: inline; }
+input, select { display: block; width: 100%; padding: 10px; border: 1px solid #aaa; border-radius: 6px; background: white; font: inherit; }
+button { font: 600 14px system-ui; padding: 11px 15px; background: var(--p); border: 1px solid var(--v); border-radius: 7px; cursor: pointer; color: #000; }
+button:hover { background: #cffafe; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+button[aria-pressed=true] { border-width: 3px; background: #eee; }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; align-items: end; }
+.muted { font-size: 14px; }
+.card { padding: 18px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.metric { padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.metric b { display: block; font-size: 21px; }
+.diagram { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 50px; padding: 30px 15px; background: var(--p); border-radius: 12px; margin: 20px 0; }
+.node { position: relative; z-index: 2; background: #fff; border: 2px solid var(--v); padding: 18px; border-radius: 12px; text-align: center; }
+.node.rx { border-color: var(--teal); }
+.node.gw { border-style: dashed; border-color: #777; }
+.node strong { display: block; font-size: 20px; }
+.node small { display: block; }
+.linkline { position: absolute; height: 3px; background: var(--v); left: 20%; right: 20%; top: 50%; }
+.linkline.cut { background: repeating-linear-gradient(90deg, var(--bad) 0 10px, transparent 10px 18px); }
+.packet { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--v); top: calc(50% - 6px); left: 22%; animation: travel .7s linear forwards; z-index: 3; }
+.packet.adv { background: var(--adv); border-radius: 2px; }
+@keyframes travel { to { left: 48%; } }
+.badge { display: inline-block; font-size: 15px; font-weight: 700; padding: 6px 10px; border-radius: 6px; background: #eee; }
+.good { background: #e1f3e5; border: 1px solid var(--ok); }
+.old { background: #fff0cc; border: 1px solid var(--old); }
+.bad { background: #ffe3e3; border: 1px solid var(--bad); }
+.chart { width: 100%; height: 285px; display: block; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+.chart.radio { height: 170px; }
+.tablewrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+th, td { border: 1px solid #d9d9d9; padding: 9px; text-align: left; }
+th { background: var(--p); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f7f7f7; padding: 15px; border: 1px solid #ddd; font: 14px/1.55 ui-monospace, Consolas, monospace; }
+.bytes { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.byte { font: 700 20px ui-monospace, Consolas, monospace; padding: 8px 12px; border: 2px solid var(--v); border-radius: 8px; background: #fff; text-align: center; }
+.byte small { display: block; font: 12px system-ui; }
+.byte.f { border-color: var(--adv); }
+.byte.h { border-color: var(--teal); }
+details { margin: 12px 0; border: 1px solid var(--line); padding: 14px; border-radius: 8px; }
+summary { cursor: pointer; font-weight: 700; }
+.formula { text-align: center; margin: 15px 0; font-family: Georgia, serif; font-size: 18px; }
+.formula span { float: right; font-size: 14px; }
+.log { height: 165px; overflow: auto; font: 13px/1.6 ui-monospace, monospace; background: #fafafa; padding: 12px; border: 1px solid var(--line); }
+.steps li { margin-bottom: 12px; }
+.printsheet { display: none; }
+footer { padding-top: 25px; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+  .controlgrid, .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .diagram { gap: 12px; padding: 18px 5px; }
+  .node { padding: 9px; font-size: 13px; }
+  .node strong { font-size: 15px; }
+  main { padding: 15px; }
+  .chart { height: 250px; }
+}
+@media print {
+  nav, .buttons, .log, details, .noprint { display: none !important; }
+  main { max-width: none; padding: 0; font-size: 11pt; }
+  header { padding: 10px 0; }
+  h1 { font-size: 22pt; }
+  .printsheet { display: block; }
+  .card, .diagram, .metrics { break-inside: avoid; }
+  .chart { height: 200px; }
+  footer { font-size: 9pt; }
+}
+@media (prefers-reduced-motion: reduce) { .packet { animation: none; display: none; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">SMMeH · L06 · MASTERAT TIMM · ÎNSOȚEȘTE CURSUL C06</div>
+  <h1>Puls transmis prin Bluetooth Low Energy</h1>
+  <p class="lead">Sisteme de măsurare și monitorizare e-health folosind tehnologii IoT</p>
+  <p>ESP32 ca senzor purtabil: advertising, conexiune, abonare prin CCCD, notificări Heart Rate 0x2A37 și vechimea datelor la telefon.</p>
+  <p>Florin Ciprian Argatu</p>
+  <div class="note"><b>Laborator virtual — puls SIMULAT.</b> Acest fișier nu se conectează la ESP32 și nu folosește radioul calculatorului. Experimentele fizice se execută separat, cu programul inclus și cu o aplicație BLE pe telefon. Valorile sunt generate de program, nu sunt măsurări fiziologice și nu se folosesc pentru decizii clinice.</div>
+</header>
+
+<nav aria-label="Cuprins">
+  <a href="#sistem">1. Sistem</a>
+  <a href="#parametri">2. Varianta N</a>
+  <a href="#experiment">3. Simulator</a>
+  <a href="#decodor">4. Decodor 0x2A37</a>
+  <a href="#interpretare">5. Explicații</a>
+  <a href="#ghid">6. Experimente</a>
+  <a href="#montaj">7. ESP32 real</a>
+  <a href="#fisa">8. Fișă</a>
+</nav>
+
+<section id="sistem">
+  <h2>1. Cine anunță, cine se conectează, cine primește</h2>
+  <div class="grid">
+    <div>
+      <p><b>Senzorul (ESP32)</b> este <b>periferic GAP</b> și <b>server GATT</b>. Anunță numele SMMeH_Nxx și serviciul Heart Rate 0x180D. După conectare păstrează caracteristica 0x2A37 cu descriptorul CCCD 0x2902 și, numai dacă clientul s-a abonat, trimite o notificare pe secundă.</p>
+      <p><b>Telefonul</b> (nRF Connect sau o aplicație asemănătoare) este <b>central GAP</b> și <b>client GATT</b>. Scanează, inițiază conexiunea, scrie 0x0001 în CCCD și decodează octeții primiți.</p>
+    </div>
+    <div>
+      <p><b>Gateway-ul</b> (opțional, punctat în schemă) ar fi un al doilea ESP32 sau un Raspberry Pi care face același lucru ca telefonul și retrimite pulsul prin Wi-Fi, prin HTTP (C05) sau MQTT (C07). În acest laborator rămâne doar ca idee.</p>
+      <p><b>Necesar practic:</b> o placă ESP32 (clasic, S3 sau C3), cablu USB de date, calculator cu Arduino IDE și un telefon cu Bluetooth și o aplicație de scanare BLE. Fără senzori și fără conexiuni între GPIO.</p>
+    </div>
+  </div>
+  <div class="diagram" id="diagram">
+    <div class="linkline" id="linkline"></div>
+    <div class="node"><strong>ESP32 senzor</strong><small>Periferic · server GATT</small><b id="txDisplay">—</b><small id="perState">Advertising</small></div>
+    <div class="node rx"><strong>Telefon</strong><small>Central · client GATT</small><b id="rxDisplay">—</b><small id="cenState">Scanează</small></div>
+    <div class="node gw"><strong>Gateway / server</strong><small>HTTP (C05) sau MQTT (C07)</small><b>opțional</b><small>nu este simulat aici</small></div>
+  </div>
+  <p class="muted">Pătratele violet sunt anunțuri (advertising), iar bulinele turcoaz sunt notificări în conexiune. Linia roșie întreruptă înseamnă legătură radio pierdută (senzor prea departe sau ecranat).</p>
+</section>
+
+<section id="parametri">
+  <h2>2. Fișa individuală după indicele N</h2>
+  <p>Generator <b>SMMeH-BLE-1.0</b>. Același N produce aceeași variantă. N este indicele din lista SMMeH (1…42), nu ID-ul Moodle.</p>
+  <div class="controlgrid">
+    <label>Disciplina<input id="group" value="SMMeH" readonly></label>
+    <label>Indice N<input id="index" type="number" min="1" max="42" value="7"></label>
+    <label>Nume anunțat<input id="nodeid" readonly></label>
+    <label>Cod variantă<input id="varcode" readonly></label>
+  </div>
+  <div class="buttons">
+    <button id="variant">Aplică varianta N și resetează</button>
+    <button id="example">Exemplul N = 7</button>
+    <button id="print">Tipărește fișa</button>
+  </div>
+  <p id="validation" role="status"></p>
+  <div class="formula">T<sub>adv</sub> = 100 + 50·(N mod 5) ms; &nbsp; T<sub>ci</sub> = 50 + 25·(N mod 6) ms; &nbsp; P = N mod 4; &nbsp; T<sub>to</sub> = 4 s <span>(1)</span></div>
+  <p><b>T<sub>adv</sub></b>: intervalul de advertising; <b>T<sub>ci</sub></b>: intervalul de conexiune; <b>P</b>: latența perifericului (câte evenimente poate sări fără date); <b>T<sub>to</sub></b>: supervision timeout. Notificările pleacă la T<sub>n</sub> = 1 s. La telefon, datele sunt <b>învechite</b> când vechimea depășește T<sub>v</sub> = 3 s (trei notificări lipsă) și <b>fără mesaje noi</b> peste T<sub>l</sub> = 2·T<sub>to</sub> = 8 s. Ca la L05, starea se schimbă când vechimea este <b>strict mai mare</b> decât pragul.</p>
+  <p id="variantSummary" class="note"></p>
+</section>
+
+<section id="experiment">
+  <h2>3. Simulatorul legăturii BLE</h2>
+  <p>Schimbarea parametrilor de mai jos resetează experimentul. Timpul afișat este timpul modelului. Pentru citiri exacte folosiți „+75 ms”, „+1 s” sau pauza.</p>
+  <div class="controlgrid">
+    <label>Advertising T<sub>adv</sub> (ms)<input id="tadv" type="number" min="20" max="10240" step="5" value="200"></label>
+    <label>Interval conexiune T<sub>ci</sub> (ms)<input id="ci" type="number" min="7.5" max="4000" step="1.25" value="75"></label>
+    <label>Latența perifericului P<input id="lat" type="number" min="0" max="499" step="1" value="3"></label>
+    <label>Supervision timeout T<sub>to</sub> (ms)<input id="to" type="number" min="100" max="32000" step="10" value="4000"></label>
+  </div>
+  <div class="buttons">
+    <label class="inline"><input type="checkbox" id="autosub" checked> Telefonul se abonează automat după conectare</label>
+    <label class="inline"><input type="checkbox" id="bug"> Eroare de program: fără restart advertising</label>
+  </div>
+  <div class="buttons">
+    <button id="play">Pornește</button>
+    <button id="stepSmall">+75 ms</button>
+    <button id="step">+1 s</button>
+    <button id="reset">Resetează</button>
+    <button id="scan" aria-pressed="false">Telefon: deconectează</button>
+    <button id="sub">Telefon: dezabonare (CCCD 0x0000)</button>
+    <button id="link" aria-pressed="false">Pierde legătura radio</button>
+    <button id="power" aria-pressed="false">Oprește senzorul</button>
+    <button id="reboot">Repornește senzorul</button>
+    <label>Viteză<select id="speed"><option value="0.25">0,25×</option><option value="1" selected>1×</option><option value="4">4×</option></select></label>
+  </div>
+  <div class="metrics">
+    <div class="metric">Timp model<b id="clock">0,000 s</b></div>
+    <div class="metric">Starea datelor la telefon<b id="status" class="badge">Nu s-au primit date</b></div>
+    <div class="metric">Vechime la telefon<b id="age">—</b></div>
+    <div class="metric">Alarmă tehnică<b id="alarm">Nu</b></div>
+    <div class="metric">Senzor (periferic)<b id="mPer">Advertising</b></div>
+    <div class="metric">Telefon (central)<b id="mCen">Scanează</b></div>
+    <div class="metric">Evenimente de advertising<b id="mAdv">0</b></div>
+    <div class="metric">Evenimente de conexiune<b id="mCe">0</b></div>
+    <div class="metric">Răspunsuri ale senzorului în ultima secundă<b id="mAns">—</b></div>
+    <div class="metric">Notificări trimise / primite<b id="mNotif">0 / 0</b></div>
+    <div class="metric">Notificări nelivrate<b id="mDrop">0</b></div>
+    <div class="metric">Ultimul puls la telefon<b id="hrrx">—</b></div>
+  </div>
+  <p id="thresholds"></p>
+  <h3>Activitatea radio în ultimele 2 secunde</h3>
+  <p class="muted">Rândul de sus: evenimentele de advertising (trei pachete, pe canalele 37, 38, 39). Rândul de jos: evenimentele de conexiune: plin = senzorul răspunde, gol = senzorul doarme (latență), roșu × = fără răspuns. Bulina roz de deasupra arată un eveniment care a dus o notificare.</p>
+  <canvas id="radio" class="chart radio" role="img" aria-label="Cronograma evenimentelor radio BLE"></canvas>
+  <div class="grid">
+    <div>
+      <h3>Pulsul simulat și ultima valoare primită</h3>
+      <p class="muted">Turcoaz continuu: puls simulat HR(t) la senzor. Roșu-zmeură în trepte: valoarea HR afișată de telefon (octetul HR, întreg). Unitate: bpm.</p>
+      <canvas id="values" class="chart" role="img" aria-label="Graficul pulsului simulat și al valorii primite"></canvas>
+    </div>
+    <div>
+      <h3>Vechimea informației la telefon</h3>
+      <p class="muted">Timpul de la ultima notificare primită. Linii punctate: T<sub>v</sub> = 3 s și T<sub>l</sub> = 2·T<sub>to</sub>.</p>
+      <canvas id="ages" class="chart" role="img" aria-label="Graficul vechimii datelor și al pragurilor"></canvas>
+    </div>
+  </div>
+  <div class="grid">
+    <div>
+      <h3>Ultima notificare 0x2A37 primită</h3>
+      <div id="lastBytes" class="bytes"></div>
+      <pre id="payload">Nicio notificare primită.</pre>
+    </div>
+    <div>
+      <h3>Jurnalul evenimentelor</h3>
+      <div id="log" class="log" aria-label="Jurnal cronologic"></div>
+    </div>
+  </div>
+  <h3>Notificări recente</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>t eșantion (s)</th><th>t primire (s)</th><th>Întârziere (ms)</th><th>Octeți</th><th>HR (bpm)</th><th>RR (1/1024 s)</th><th>RR (s)</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="buttons">
+    <button id="csv">Exportă CSV simulare</button>
+  </div>
+  <p class="muted">CSV-ul conține notificările primite și jurnalul, cu N, configurația, unitățile și eticheta SIMULARE. Nu reprezintă măsurări fizice.</p>
+</section>
+
+<section id="decodor">
+  <h2>4. Decodorul măsurării Heart Rate (0x2A37)</h2>
+  <p>Scrieți octeții în hexazecimal, separați prin spațiu, exact cum îi arată aplicația de pe telefon. Calculați întâi de mână, apoi verificați aici.</p>
+  <div class="controlgrid">
+    <label style="grid-column: span 3">Octeți (hex)<input id="hexIn" value="16 48 0A 03" autocomplete="off" spellcheck="false"></label>
+    <div class="buttons" style="margin:0"><button id="decode">Decodează</button><button id="useLast">Ultima notificare</button></div>
+  </div>
+  <div id="decBytes" class="bytes"></div>
+  <div class="tablewrap"><table><tbody id="decTable"></tbody></table></div>
+  <p id="decMsg" role="status"></p>
+</section>
+
+<section id="interpretare">
+  <h2>5. Ce se poate deduce din date</h2>
+  <div class="grid">
+    <div>
+      <h3>Pulsul simulat și octeții</h3>
+      <div class="formula">HR(t<sub>u</sub>) = 70 + 0,5·N + 8·sin(2π·t<sub>u</sub>/40) [bpm] <span>(2)</span></div>
+      <div class="formula">octet HR = round(HR); &nbsp; RR = round(61440 / HR) [1/1024 s] <span>(3)</span></div>
+      <p>t<sub>u</sub> este timpul de funcționare al senzorului (uptime), în secunde. La fiecare secundă senzorul pune în 0x2A37 patru octeți: Flags 0x16 (HR pe 8 biți, contact suportat și detectat, un interval RR), HR rotunjit și RR în little-endian. 61440 = 60·1024. În simulare RR este calculat din același HR, deci 60/RR dă înapoi pulsul; la un senzor real RR este o singură bătaie și diferă de HR mediu (curs C06).</p>
+    </div>
+    <div>
+      <h3>Evenimente, latență și vechime</h3>
+      <div class="formula">f<sub>răspuns</sub> = 1 / (T<sub>ci</sub>·(1 + P)) &nbsp; (fără date) <span>(4)</span></div>
+      <div class="formula">n<sub>adv</sub> = 3 · 3600 / T<sub>adv</sub> &nbsp; [pachete/oră, fără advDelay] <span>(5)</span></div>
+      <div class="formula">a(t) = t − t<sub>primire, ultima</sub> <span>(6)</span></div>
+      <p>Când are o notificare de trimis, senzorul nu mai așteaptă: răspunde la primul eveniment de conexiune de după eșantion, deci întârzierea în model este cel mult T<sub>ci</sub>. Vechimea a se măsoară cu ceasul telefonului, ca în L05.</p>
+    </div>
+  </div>
+  <details>
+    <summary>Stările și limitele modelului</summary>
+    <p>Telefonul: „Nu s-au primit date” înainte de prima notificare; a ≤ T<sub>v</sub> date actualizate; T<sub>v</sub> &lt; a ≤ T<sub>l</sub> date învechite (alarmă tehnică); a &gt; T<sub>l</sub> fără mesaje noi (alarmă tehnică). Pragurile sunt ale exercițiului, nu valori clinice. Alarma tehnică privește sistemul, nu pacientul.</p>
+    <p>Modelul simplifică: advertising-ul nu are întârzierea aleatoare advDelay (0…10 ms), conexiunea pornește la anunțul imediat următor pornirii scanării, primul eveniment de conexiune vine după T<sub>ci</sub>, nu se simulează saltul de frecvență, interferența, retransmisiile din Link Layer, MTU sau pairing-ul. Parametrii conexiunii sunt cei ceruți de senzor; un telefon real îi poate accepta sau poate impune alții.</p>
+  </details>
+  <details>
+    <summary>De ce telefonul nu poate număra notificările pierdute</summary>
+    <p>În L05 fiecare mesaj HTTP avea numărul de secvență s, deci lipsurile se deduceau din salturi. Măsurarea 0x2A37 nu are câmp de secvență. Telefonul vede doar că notificările nu mai vin (vechimea crește); contorul „notificări nelivrate” există numai în simulator, care vede ambele capete.</p>
+  </details>
+</section>
+
+<section id="ghid">
+  <h2>6. Experimente ghidate</h2>
+  <p>Scrieți predicția înainte să porniți. Pauza îngheață întregul model și nu reprezintă un defect radio.</p>
+  <ol class="steps">
+    <li><b>Descoperire și conectare.</b> Aplicați varianta N și avansați cu „+75 ms”. Notați momentul conexiunii (CONNECT_IND), momentul scrierii CCCD și momentul primei notificări. Explicați de ce înainte de abonare nu vine nicio notificare.
+      <details><summary>Reper pentru verificare</summary><p>Telefonul scanează de la t = 0, deci se conectează la primul anunț (t = 0). CCCD se scrie la primul eveniment de conexiune (t = T<sub>ci</sub>). Primul eșantion este la t = 1 s și pleacă la primul eveniment de conexiune ≥ 1 s.</p></details></li>
+    <li><b>Latența perifericului.</b> Fără să schimbați altceva, citiți pe cronogramă câte evenimente goale (senzorul doarme) sunt între două răspunsuri. Comparați „Răspunsuri în ultima secundă” cu relația (4). Repetați cu P = 0.</li>
+    <li><b>Abonarea.</b> Apăsați „Telefon: dezabonare”. Urmăriți scrierea CCCD = 0x0000, contorul notificărilor trimise și vechimea. Reabonați-vă. Ce nu s-a schimbat la nivelul conexiunii?</li>
+    <li><b>Legătura pierdută.</b> După cel puțin 5 notificări, apăsați „Pierde legătura radio”. Notați momentele: date învechite, supervision timeout, fără mesaje noi. Câte notificări s-au pierdut? Restabiliți legătura și notați reconectarea.</li>
+    <li><b>Eroarea de program.</b> Resetați cu bifa „fără restart advertising”. Repetați experimentul 4. Explicați de ce senzorul nu mai poate fi găsit chiar după ce legătura revine și ce linie din program rezolvă problema.</li>
+    <li><b>Senzorul oprit.</b> Resetați (fără eroare), apoi „Oprește senzorul”. Telefonul este anunțat? După cât timp declară conexiunea pierdută? Porniți senzorul și urmăriți uptime-ul în valoarea HR.</li>
+  </ol>
+  <div class="note"><b>Exemplu N = 7:</b> T<sub>adv</sub> = 200 ms, T<sub>ci</sub> = 75 ms, P = 3, T<sub>to</sub> = 4 s. Conexiune la t = 0, CCCD scris la 0,075 s. Primul eșantion, la uptime 1 s: HR = 74,751 bpm → octeții <b>16 4B 36 03</b> (HR = 75 bpm, RR = 822/1024 s = 0,803 s), primit la 1,050 s (întârziere 50 ms). Fără date, senzorul răspunde la fiecare al 4-lea eveniment: o dată la 300 ms, adică 3,33 răspunsuri/s. Advertising: 15 pachete/s, 54 000 pe oră. Dacă legătura se pierde la t = 5 s (ultima notificare primită la 4,050 s), datele devin învechite strict după 7,050 s, conexiunea este declarată pierdută la 9,000 s, cu 5 notificări nelivrate, iar „fără mesaje noi” apare strict după 12,050 s.</div>
+</section>
+
+<section id="montaj">
+  <h2>7. Trecerea la ESP32 real și telefon</h2>
+  <p>Programul este pentru plăci ESP32 cu pachetul Arduino-ESP32 și folosește biblioteca BLE inclusă (BLEDevice, BLEServer, BLE2902). Nu folosește senzori; pulsul este simulat. Alimentarea se face prin USB. <b>Codul nu a fost compilat și nu a fost testat pe placă de autorul aplicației</b>: la prima rulare verificați mesajele din Serial Monitor.</p>
+  <ol class="steps">
+    <li>În Arduino IDE selectați placa și portul. Nu instalați o bibliotecă BLE separată cu același nume.</li>
+    <li>În program completați N (1…42). Numele anunțat (SMMeH_N07 în exemplu) și parametrii variantei se calculează din N.</li>
+    <li>Încărcați <b>SMMeH_L06_Senzor_BLE.ino</b>. Deschideți Serial Monitor la 115200 baud: la fiecare secundă apar HR și cei patru octeți.</li>
+    <li>Pe telefon deschideți o aplicație de scanare BLE (de exemplu nRF Connect). Găsiți SMMeH_Nxx, verificați serviciul 0x180D în anunț și conectați-vă.</li>
+    <li>Deschideți serviciul Heart Rate, caracteristica 0x2A37, și porniți notificările (în nRF Connect: săgețile de abonare). Aceasta scrie 0x0001 în CCCD. Comparați octeții de pe telefon cu Serial Monitor și decodați-i în secțiunea 4.</li>
+    <li>Îndepărtați telefonul sau acoperiți placa cu o cutie metalică până la deconectare; notați după cât timp apare „Deconectat” în Serial Monitor. Reveniți și reconectați-vă.</li>
+    <li>Opțional: schimbați REPORNESTE_ADV = false, reîncărcați și repetați pasul 6. Senzorul nu mai apare la scanare până la resetarea plăcii.</li>
+  </ol>
+  <div class="buttons"><button id="downloadFw">Descarcă programul senzorului</button></div>
+  <p class="muted">Programul descărcat conține exemplul N = 7. Simulatorul nu rescrie automat programul. Dacă linia updateConnParams nu se compilează în versiunea voastră de Arduino-ESP32, puneți CERE_PARAMETRI 0: telefonul va alege atunci singur parametrii conexiunii.</p>
+  <details>
+    <summary>Dacă nu funcționează</summary>
+    <ul>
+      <li>Nu apare portul: verificați cablul USB de date și driverul plăcii.</li>
+      <li>Senzorul nu apare la scanare: verificați în Serial Monitor mesajul de pornire; pe Android, aplicația de scanare cere permisiunea de localizare / dispozitive din apropiere.</li>
+      <li>Conexiunea merge, dar nu vin date: nu ați pornit notificările (CCCD rămâne 0x0000).</li>
+      <li>Telefonul arată alt interval de conexiune: centralul decide; notați valoarea reală.</li>
+      <li>După deconectare senzorul nu mai apare: advertising-ul nu a fost repornit (experimentul 5).</li>
+    </ul>
+  </details>
+</section>
+
+<section id="fisa">
+  <h2>8. Fișa individuală și predarea</h2>
+  <p id="sheetid"></p>
+  <div class="printsheet">Nume și prenume: ____________________ Grupa: ________ Data: __________</div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Mărime</th><th>Relația</th><th>Calculat</th><th>Simulator</th><th>ESP32 + telefon</th></tr></thead>
+      <tbody>
+        <tr><td>T<sub>adv</sub>, T<sub>ci</sub>, P</td><td>(1)</td><td>____ ms, ____ ms, ____</td><td>____</td><td>T<sub>ci</sub> real: ____ ms</td></tr>
+        <tr><td>Octeții primei notificări</td><td>(2), (3)</td><td>__ __ __ __</td><td>__ __ __ __</td><td>__ __ __ __</td></tr>
+        <tr><td>Răspunsuri ale senzorului pe secundă, fără date</td><td>(4)</td><td>______ /s</td><td>______ /s</td><td>—</td></tr>
+        <tr><td>Pachete de advertising pe oră</td><td>(5)</td><td>______</td><td>—</td><td>—</td></tr>
+        <tr><td>Legătură pierdută: învechite / timeout / fără mesaje</td><td>(6)</td><td>____ / ____ / ____ s</td><td>____ / ____ / ____ s</td><td>timeout: ____ s</td></tr>
+        <tr><td>Notificări nelivrate</td><td>—</td><td>______</td><td>______</td><td>nu se pot număra</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><b>Folosire:</b> laboratorul L06 însoțește cursul C06 (Bluetooth Low Energy în e-health). Cerințele de predare, capturile și evaluarea sunt cele din îndrumarul L06. Menționați explicit probele neexecutate. Nu înlocuiți o probă fizică printr-o captură de simulator.</p>
+  <p><b>Întrebări:</b> 1. De ce senzorul este periferic și server GATT? 2. Ce face scrierea 0x0001 în 0x2902? 3. De ce scade numărul de răspunsuri când crește P, dar întârzierea notificării nu crește? 4. De ce telefonul nu știe câte notificări s-au pierdut? 5. De ce nu se pune pulsul direct în anunț? 6. Ce ar trebui să facă un gateway cu vechimea datelor înainte de a le trimite la server?</p>
+</section>
+
+<footer>
+  <b>Referințe</b><br>
+  Argatu F. C. SMMeH_C06_Bluetooth_Low_Energy (curs), v1.0, 2026; SMMeH_L05_Comunicatie_HTTP (aplicație), v1.0.<br>
+  Bluetooth SIG — Bluetooth Core Specification (Vol. 6 LE Controller; Vol. 3 GAP, ATT, GATT): https://www.bluetooth.com/specifications/specs/<br>
+  Bluetooth SIG — Assigned Numbers și Heart Rate Service 1.0: https://www.bluetooth.com/specifications/assigned-numbers/<br>
+  Espressif Systems — Arduino-ESP32, biblioteca BLE (exemplul BLE_notify): https://github.com/espressif/arduino-esp32/tree/master/libraries/BLE<br>
+  Nordic Semiconductor — nRF Connect for Mobile: https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile<br>
+  F. C. Argatu · SMMeH · 2026–2027 · SMMeH_L06_Puls_BLE_v1.0 · Aplicația nu transmite note și nu identifică studentul.
+</footer>
+
+<script id="firmware" type="text/plain">
+// SMMeH-BLE-1.0 - ESP32 senzor BLE: serviciul Heart Rate (0x180D), puls SIMULAT (bpm).
+// Material didactic. Nu este dispozitiv medical; valorile nu sunt masurari fiziologice.
+// Placa: ESP32 / ESP32-S3 / ESP32-C3 cu pachetul Arduino-ESP32 (biblioteca BLE inclusa).
+// Codul nu a fost compilat si nu a fost testat pe placa de autor: verificati la prima rulare.
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+#include <math.h>
+
+const uint8_t N = 7;                 // indicele N din lista SMMeH: 1..42
+const bool REPORNESTE_ADV = true;    // false = eroarea din experimentul 5 (senzorul nu mai poate fi gasit)
+#define CERE_PARAMETRI 1             // 1 = perifericul cere intervalul variantei; 0 daca nu se compileaza
+
+const uint32_t T_NOTIF_MS = 1000;                 // o notificare pe secunda
+const uint16_t TADV_MS = 100 + 50 * (N % 5);      // interval de advertising
+const uint16_t CI_MS   = 50 + 25 * (N % 6);       // interval de conexiune cerut
+const uint16_t LAT     = N % 4;                   // latenta perifericului
+const uint16_t TO_MS   = 4000;                    // supervision timeout
+
+BLEServer* server = nullptr;
+BLECharacteristic* hrChar = nullptr;
+volatile bool conectat = false;
+bool eraConectat = false;
+uint32_t bootMs = 0, tNext = 0, nrNotif = 0;
+
+// HR(t) = 70 + N/2 + 8 sin(2*pi*t/40)  [bpm], t = uptime in secunde
+float source(uint32_t upMs) {
+  return 70.0f + 0.5f * N + 8.0f * sinf(2.0f * PI * (upMs / 1000.0f) / 40.0f);
+}
+
+class Callbacks : public BLEServerCallbacks {
+#if CERE_PARAMETRI
+  void onConnect(BLEServer* s, esp_ble_gatts_cb_param_t* param) {
+    conectat = true;
+    // unitati: interval 1,25 ms; timeout 10 ms. Centralul (telefonul) poate accepta sau nu cererea.
+    s->updateConnParams(param->connect.remote_bda, CI_MS * 4 / 5, CI_MS * 4 / 5, LAT, TO_MS / 10);
+    Serial.printf("Conectat; cerut interval %u ms, latenta %u, timeout %u ms\n", CI_MS, LAT, TO_MS);
+  }
+#else
+  void onConnect(BLEServer* s) {
+    conectat = true;
+    Serial.println("Conectat");
+  }
+#endif
+  void onDisconnect(BLEServer* s) {
+    conectat = false;
+    Serial.println("Deconectat");
+  }
+};
+
+void setup() {
+  Serial.begin(115200);
+  if (N < 1 || N > 42) { Serial.println("N invalid"); while (true) delay(1000); }
+  char nume[12];
+  snprintf(nume, sizeof(nume), "SMMeH_N%02u", N);
+
+  BLEDevice::init(nume);
+  server = BLEDevice::createServer();
+  server->setCallbacks(new Callbacks());
+
+  BLEService* svc = server->createService(BLEUUID((uint16_t)0x180D));          // Heart Rate
+  hrChar = svc->createCharacteristic(BLEUUID((uint16_t)0x2A37),               // Heart Rate Measurement
+                                     BLECharacteristic::PROPERTY_NOTIFY);
+  hrChar->addDescriptor(new BLE2902());                                        // CCCD 0x2902
+  svc->start();
+
+  BLEAdvertising* adv = BLEDevice::getAdvertising();
+  adv->addServiceUUID(BLEUUID((uint16_t)0x180D));
+  adv->setScanResponse(true);
+  adv->setMinInterval(TADV_MS * 8 / 5);   // unitati de 0,625 ms
+  adv->setMaxInterval(TADV_MS * 8 / 5);
+  BLEDevice::startAdvertising();
+
+  bootMs = millis();
+  tNext = bootMs + T_NOTIF_MS;
+  Serial.printf("Senzor %s: advertising la %u ms; 0x180D / 0x2A37; HR SIMULAT\n", nume, TADV_MS);
+}
+
+void loop() {
+  uint32_t now = millis();
+  if ((int32_t)(now - tNext) >= 0) {
+    tNext += T_NOTIF_MS;                               // pas fix, fara deriva (C04)
+    float hr = source(now - bootMs);
+    uint8_t hrb = (uint8_t)lroundf(hr);
+    uint16_t rr = (uint16_t)lroundf(61440.0f / hr);   // 60 * 1024 / HR, unitate 1/1024 s
+    uint8_t m[4] = {0x16, hrb, (uint8_t)(rr & 0xFF), (uint8_t)(rr >> 8)};
+    hrChar->setValue(m, 4);
+    if (conectat) {                                    // notificam doar daca exista client
+      hrChar->notify();
+      nrNotif++;
+    }
+    Serial.printf("t=%lu ms HR=%.2f bpm octeti=%02X %02X %02X %02X %s\n",
+                  (unsigned long)(now - bootMs), hr, m[0], m[1], m[2], m[3],
+                  conectat ? "notify" : "(fara client)");
+  }
+  // dupa deconectare reluam advertising-ul (ca in exemplul Espressif BLE_notify)
+  if (!conectat && eraConectat) {
+    delay(500);
+    if (REPORNESTE_ADV) {
+      server->startAdvertising();
+      Serial.println("Advertising repornit");
+    } else {
+      Serial.println("Advertising NEpornit - senzorul nu mai poate fi gasit");
+    }
+    eraConectat = false;
+  }
+  if (conectat && !eraConectat) eraConectat = true;
+  delay(5);
+}
+
+</script>
+
+<script>
+'use strict';
+// ===== MODELUL BLE (fără DOM) – SMMeH-BLE-1.0 =====
+// Timpul modelului este în milisecunde. Simulare pe evenimente, deterministă.
+const VERSION = '1.0';
+const CODE = 'SMMeH-L06';
+const GEN = 'SMMeH-BLE-1.0';
+const N_MIN = 1, N_MAX = 42, N_EXEMPLU = 7;
+const T_NOTIF = 1000;            // perioada notificărilor (ms)
+const T_VECHI = 3000;            // prag „date învechite” (ms) = 3 notificări lipsă
+
+function variant(n) {
+  return {
+    n: n,
+    node: 'SMMeH_N' + String(n).padStart(2, '0'),
+    tadv: 100 + 50 * (n % 5),     // ms, multiplu de 0,625 ms
+    ci: 50 + 25 * (n % 6),        // ms, multiplu de 1,25 ms
+    lat: n % 4,                   // evenimente pe care perifericul le poate sări
+    to: 4000                      // supervision timeout (ms)
+  };
+}
+
+function validN(n) {
+  return Number.isInteger(n) && n >= N_MIN && n <= N_MAX;
+}
+
+function hrAt(n, upMs) {
+  return 70 + 0.5 * n + 8 * Math.sin(2 * Math.PI * (upMs / 1000) / 40);
+}
+
+// Măsurarea Heart Rate 0x2A37: Flags 0x16, HR uint8, un interval RR (1/1024 s)
+function encodeHR(hr) {
+  const b = Math.max(0, Math.min(255, Math.round(hr)));
+  const rr = Math.round(61440 / hr);           // 60 * 1024 / HR
+  return [0x16, b, rr & 0xff, (rr >> 8) & 0xff];
+}
+
+function decodeHR(bytes) {
+  if (!bytes.length) throw new Error('Nu există octeți.');
+  const fl = bytes[0];
+  let i = 1;
+  const out = { flags: fl, hr16: !!(fl & 1), contact: (fl >> 1) & 3,
+                energyPresent: !!(fl & 8), rrPresent: !!(fl & 16), rr: [] };
+  if (out.hr16) {
+    if (bytes.length < 3) throw new Error('Flags cer HR pe 16 biți, dar lipsesc octeți.');
+    out.hr = bytes[1] | (bytes[2] << 8); i = 3;
+  } else {
+    if (bytes.length < 2) throw new Error('Lipsește octetul HR.');
+    out.hr = bytes[1]; i = 2;
+  }
+  if (out.energyPresent) {
+    if (bytes.length < i + 2) throw new Error('Flags anunță Energie, dar lipsesc 2 octeți.');
+    out.energy = bytes[i] | (bytes[i + 1] << 8); i += 2;
+  }
+  if (out.rrPresent) {
+    if ((bytes.length - i) < 2 || (bytes.length - i) % 2) throw new Error('Intervalele RR trebuie să fie perechi de câte 2 octeți.');
+    for (; i < bytes.length; i += 2) out.rr.push(bytes[i] | (bytes[i + 1] << 8));
+  } else if (i !== bytes.length) {
+    throw new Error('Octeți în plus față de ce anunță Flags.');
+  }
+  return out;
+}
+
+function hex(bytes) {
+  return bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+}
+
+function newState(cfg, opt) {
+  return {
+    cfg: cfg,
+    t: 0, bootAt: 0, boot: 1, on: true,
+    per: 'adv',                    // adv | conn | idle | off
+    perSub: false,                 // CCCD la periferic
+    link: true,
+    autoSub: opt.autoSub !== false,
+    bug: !!opt.bug,
+    cen: { scanning: true, connected: false, sub: false, lastHeard: 0,
+           last: null, cccdWrite: null },
+    perLastHeard: 0,
+    nextAdv: 0, nextConn: Infinity, nextSample: T_NOTIF, nextHist: 0,
+    skipped: 0, pending: [],
+    cnt: { adv: 0, ce: 0, ans: 0, skip: 0, lost: 0, gen: 0, sent: 0, rx: 0, drop: 0, conns: 0 },
+    radio: [], log: [], rows: [], history: [], answers: []
+  };
+}
+
+function logS(S, text) {
+  S.log.push({ t: S.t, text: text });
+  if (S.log.length > 3000) S.log.shift();
+}
+
+function radio(S, type) {
+  S.radio.push({ t: S.t, type: type });
+  if (S.radio.length > 4000) S.radio.shift();
+}
+
+function dropPending(S, why) {
+  if (S.pending.length) {
+    S.cnt.drop += S.pending.length;
+    logS(S, S.pending.length + ' notificări nelivrate (' + why + ').');
+  }
+  S.pending = [];
+}
+
+function onAdv(S) {
+  S.cnt.adv++;
+  radio(S, 'adv');
+  const c = S.cen;
+  if (c.scanning && !c.connected && S.link) {
+    c.connected = true; c.sub = false; c.lastHeard = S.t;
+    S.per = 'conn'; S.perSub = false; S.perLastHeard = S.t;
+    S.skipped = 0; S.cnt.conns++;
+    S.nextConn = S.t + S.cfg.ci;
+    c.cccdWrite = S.autoSub ? 1 : null;
+    logS(S, 'CONNECT_IND: telefonul se conectează la ' + S.cfg.node + ' (interval ' + S.cfg.ci + ' ms, latență ' + S.cfg.lat + ', timeout ' + S.cfg.to + ' ms).');
+  }
+}
+
+function onSample(S) {
+  const up = S.t - S.bootAt;
+  const hr = hrAt(S.cfg.n, up);
+  const bytes = encodeHR(hr);
+  S.cnt.gen++;
+  if (S.per === 'conn' && S.perSub) {
+    S.pending.push({ bytes: bytes, hr: hr, tGen: S.t, up: up });
+    S.cnt.sent++;
+  }
+  S.lastGen = { bytes: bytes, hr: hr, tGen: S.t, up: up };
+}
+
+function onConnEvent(S) {
+  const c = S.cen, cfg = S.cfg;
+  S.cnt.ce++;
+  const reach = S.link && S.on && S.per === 'conn';
+  if (reach) {
+    const mustAnswer = S.pending.length > 0 || c.cccdWrite !== null || S.skipped >= cfg.lat;
+    if (mustAnswer) {
+      S.skipped = 0;
+      c.lastHeard = S.t; S.perLastHeard = S.t;
+      S.cnt.ans++; S.answers.push(S.t);
+      if (c.cccdWrite !== null) {
+        S.perSub = c.cccdWrite === 1; c.sub = S.perSub;
+        logS(S, 'Write CCCD 0x2902 = ' + (S.perSub ? '0x0001 (notify pornit)' : '0x0000 (notify oprit)') + '; Write Response.');
+        c.cccdWrite = null;
+      }
+      const data = S.pending.length > 0;
+      for (const p of S.pending) {
+        S.cnt.rx++;
+        const d = decodeHR(p.bytes);
+        c.last = { bytes: p.bytes, hr: d.hr, rr: d.rr[0], tGen: p.tGen, tRx: S.t, up: p.up };
+        S.rows.push(c.last);
+        if (S.rows.length > 2000) S.rows.shift();
+      }
+      if (data) logS(S, 'Notificare 0x2A37 [' + hex(S.pending[S.pending.length - 1].bytes) + '] primită; întârziere ' + (S.t - S.pending[0].tGen) + ' ms.');
+      S.pending = [];
+      radio(S, data ? 'data' : 'ce');
+    } else {
+      S.skipped++; S.cnt.skip++;
+      radio(S, 'skip');
+    }
+  } else {
+    S.cnt.lost++;
+    radio(S, 'lost');
+  }
+  // supervision timeout la central
+  if (S.t - c.lastHeard > cfg.to) {
+    c.connected = false; c.sub = false; c.cccdWrite = null;
+    S.nextConn = Infinity;
+    logS(S, 'Telefon: supervision timeout (' + cfg.to + ' ms fără răspuns) – conexiunea declarată pierdută.' + (c.scanning ? ' Reia scanarea.' : ''));
+  }
+  // supervision timeout la periferic (dacă e pornit și crede că e conectat)
+  if (S.on && S.per === 'conn' && S.t - S.perLastHeard > cfg.to) {
+    perDisconnected(S, 'supervision timeout');
+  }
+  if (c.connected) S.nextConn = S.t + cfg.ci;
+}
+
+function perDisconnected(S, why) {
+  S.perSub = false;
+  dropPending(S, why);
+  if (S.bug) {
+    S.per = 'idle';
+    logS(S, 'Senzor: deconectat (' + why + '). EROARE DE PROGRAM: advertising-ul nu este repornit – senzorul nu mai poate fi găsit.');
+  } else {
+    S.per = 'adv';
+    S.nextAdv = S.t + S.cfg.tadv;
+    logS(S, 'Senzor: deconectat (' + why + '); onDisconnect repornește advertising-ul.');
+  }
+}
+
+function histPoint(S) {
+  const c = S.cen;
+  S.history.push({
+    t: S.t,
+    src: S.on ? hrAt(S.cfg.n, S.t - S.bootAt) : null,
+    rx: c.last ? c.last.hr : null,
+    age: c.last ? S.t - c.last.tRx : null
+  });
+  if (S.history.length > 3000) S.history.shift();
+}
+
+// avansează modelul până la momentul target (ms)
+function runTo(S, target) {
+  for (let guard = 0; guard < 1e6; guard++) {
+    const advDue = (S.on && S.per === 'adv') ? S.nextAdv : Infinity;
+    const sampDue = S.on ? S.nextSample : Infinity;
+    const connDue = S.cen.connected ? S.nextConn : Infinity;
+    const next = Math.min(advDue, sampDue, connDue, S.nextHist);
+    if (next > target + 1e-9) break;
+    S.t = Math.round(next * 1000) / 1000;
+    // ordinea la egalitate: eșantion, eveniment de conexiune, advertising, istoric
+    if (sampDue === next) { onSample(S); S.nextSample += T_NOTIF; continue; }
+    if (connDue === next) { onConnEvent(S); continue; }
+    if (advDue === next) { onAdv(S); S.nextAdv += S.cfg.tadv; continue; }
+    histPoint(S); S.nextHist += 100;
+  }
+  S.t = target;
+}
+
+function centralStatus(S) {
+  const c = S.cen;
+  if (!c.last) return 'Nu s-au primit date';
+  const a = S.t - c.last.tRx;
+  if (a > 2 * S.cfg.to + 1e-9) return 'Fără mesaje noi';
+  if (a > T_VECHI + 1e-9) return 'Date învechite';
+  return 'Date actualizate';
+}
+
+// comenzi
+function cmdLink(S) {
+  S.link = !S.link;
+  if (!S.link) logS(S, 'Legătura radio întreruptă (senzor prea departe / ecranat).');
+  else logS(S, 'Legătura radio restabilită.');
+}
+function cmdScan(S) {
+  const c = S.cen;
+  if (c.connected) {
+    c.connected = false; c.sub = false; c.scanning = false; c.cccdWrite = null; S.nextConn = Infinity;
+    logS(S, 'Telefonul se deconectează voluntar (LL_TERMINATE_IND) și oprește scanarea.');
+    if (S.on && S.per === 'conn' && S.link) perDisconnected(S, 'deconectare cerută de telefon');
+  } else {
+    c.scanning = !c.scanning;
+    logS(S, c.scanning ? 'Telefonul pornește scanarea.' : 'Telefonul oprește scanarea.');
+  }
+}
+function cmdSub(S) {
+  const c = S.cen;
+  if (!c.connected) { logS(S, 'Abonarea cere o conexiune.'); return; }
+  c.cccdWrite = c.sub ? 0 : 1;
+  logS(S, 'Telefonul pregătește Write CCCD = ' + (c.cccdWrite ? '0x0001' : '0x0000') + ' (se trimite la următorul eveniment de conexiune).');
+}
+function cmdReboot(S) {
+  S.on = true; S.boot++; S.bootAt = S.t; S.per = 'adv'; S.perSub = false;
+  dropPending(S, 'repornire');
+  S.nextAdv = S.t; S.nextSample = S.t + T_NOTIF; S.skipped = 0;
+  logS(S, 'Repornire senzor: sesiunea ' + S.boot + '; uptime de la 0; abonarea se pierde.');
+}
+function cmdPower(S) {
+  if (S.on) {
+    S.on = false; S.per = 'off'; S.perSub = false; dropPending(S, 'senzor oprit');
+    logS(S, 'Senzor oprit (baterie scoasă). Telefonul nu este anunțat.');
+  } else cmdReboot(S);
+}
+
+if (typeof module !== 'undefined') module.exports = { variant, validN, hrAt, encodeHR, decodeHR, hex, newState, runTo, centralStatus, cmdLink, cmdScan, cmdSub, cmdReboot, cmdPower, T_NOTIF, T_VECHI };
+
+
+// ===== INTERFAȚA =====
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 1) => Number(x).toFixed(d).replace('.', ',');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let cfg = null, S = null, playing = false, lastFrame = 0, acc = 0;
+
+function readConfig() {
+  const n = Number($('index').value);
+  return {
+    n: n, node: 'SMMeH_N' + String(n).padStart(2, '0'),
+    tadv: Number($('tadv').value), ci: Number($('ci').value),
+    lat: Number($('lat').value), to: Number($('to').value)
+  };
+}
+
+function validConfig(c) {
+  if (!validN(c.n)) return 'N trebuie să fie un întreg între ' + N_MIN + ' și ' + N_MAX + '.';
+  if (!(c.tadv >= 20 && c.tadv <= 10240)) return 'Tadv trebuie să fie între 20 ms și 10 240 ms.';
+  if (!(c.ci >= 7.5 && c.ci <= 4000)) return 'Tci trebuie să fie între 7,5 ms și 4000 ms.';
+  if (!(Number.isInteger(c.lat) && c.lat >= 0 && c.lat <= 499)) return 'P trebuie să fie un întreg între 0 și 499.';
+  if (!(c.to >= 100 && c.to <= 32000)) return 'Tto trebuie să fie între 100 ms și 32 000 ms.';
+  if (c.to <= (1 + c.lat) * c.ci * 2) return 'Timeout prea mic: Tto trebuie să fie mai mare decât 2·Tci·(1 + P) = ' + fmt((1 + c.lat) * c.ci * 2, 0) + ' ms (regula din specificație).';
+  return '';
+}
+
+function reset() {
+  const c = readConfig();
+  const err = validConfig(c);
+  if (err) { $('validation').textContent = err; return false; }
+  $('validation').textContent = '';
+  cfg = c;
+  S = newState(cfg, { autoSub: $('autosub').checked, bug: $('bug').checked });
+  logS(S, 'Resetare. Senzorul pornește advertising-ul ca ' + cfg.node + '; telefonul scanează. Date SIMULATE.');
+  playing = false; $('play').textContent = 'Pornește';
+  const v = variant(cfg.n);
+  $('nodeid').value = v.node;
+  $('varcode').value = CODE + '-N' + String(cfg.n).padStart(2, '0') + '-v' + VERSION;
+  $('variantSummary').textContent = 'Varianta ' + v.node + ' · Tadv = ' + v.tadv + ' ms · Tci = ' + v.ci + ' ms · P = ' + v.lat +
+    ' · Tto = ' + v.to / 1000 + ' s · răspunsuri fără date = ' + fmt(1000 / (v.ci * (1 + v.lat)), 2) + ' /s · advertising = ' +
+    (3 * 3600 * 1000 / v.tadv).toLocaleString('ro-RO') + ' pachete/oră · versiune ' + GEN + '.';
+  render();
+  return true;
+}
+
+function applyVariant() {
+  const n = Number($('index').value);
+  if (!validN(n)) { $('validation').textContent = 'N trebuie să fie un întreg între ' + N_MIN + ' și ' + N_MAX + '.'; return; }
+  const v = variant(n);
+  $('tadv').value = v.tadv; $('ci').value = v.ci; $('lat').value = v.lat; $('to').value = v.to;
+  $('autosub').checked = true; $('bug').checked = false;
+  reset();
+}
+
+function advance(ms) {
+  runTo(S, S.t + ms);
+  render();
+}
+
+function particle(kind) {
+  if (!playing) return;
+  const e = document.createElement('i');
+  e.className = 'packet' + (kind === 'adv' ? ' adv' : '');
+  $('diagram').append(e);
+  setTimeout(() => e.remove(), 800);
+}
+
+let lastRadioCount = 0;
+function animateRadio() {
+  const fresh = S.radio.slice(lastRadioCount);
+  lastRadioCount = S.radio.length;
+  if (fresh.some(r => r.type === 'adv')) particle('adv');
+  if (fresh.some(r => r.type === 'data')) particle('data');
+}
+
+function perText() {
+  if (!S.on) return 'Oprit';
+  return { adv: 'Advertising', conn: S.perSub ? 'Conectat · notify pornit' : 'Conectat · fără abonare', idle: 'Inactiv (nu anunță)', off: 'Oprit' }[S.per];
+}
+
+function cenText() {
+  const c = S.cen;
+  if (c.connected) return c.sub ? 'Conectat · abonat' : 'Conectat · neabonat';
+  return c.scanning ? 'Scanează' : 'Inactiv';
+}
+
+function render() {
+  if (!S) return;
+  const c = S.cen;
+  const st = centralStatus(S);
+  const a = c.last ? S.t - c.last.tRx : null;
+  const recent = S.answers.filter(t => t > S.t - 1000 && t <= S.t).length;
+  const vals = {
+    clock: fmt(S.t / 1000, 3) + ' s',
+    age: a === null ? '—' : fmt(a / 1000, 2) + ' s',
+    mPer: perText(), mCen: cenText(),
+    mAdv: S.cnt.adv, mCe: S.cnt.ce,
+    mAns: S.t >= 1000 ? recent + ' (teoretic ' + fmt(1000 / (cfg.ci * (1 + cfg.lat)), 2) + ' fără date)' : '—',
+    mNotif: S.cnt.sent + ' / ' + S.cnt.rx,
+    mDrop: S.cnt.drop,
+    hrrx: c.last ? c.last.hr + ' bpm' : '—',
+    txDisplay: S.on ? fmt(hrAt(cfg.n, S.t - S.bootAt), 1) + ' bpm' : 'Oprit',
+    rxDisplay: c.last ? c.last.hr + ' bpm' : 'Nicio valoare',
+    perState: perText(), cenState: cenText()
+  };
+  for (const [id, v] of Object.entries(vals)) $(id).textContent = v;
+  $('status').textContent = st;
+  $('status').className = 'badge ' + (st === 'Date actualizate' ? 'good' : st === 'Date învechite' ? 'old' : st === 'Fără mesaje noi' ? 'bad' : '');
+  const alarm = c.last && a > T_VECHI;
+  $('alarm').textContent = alarm ? 'DA — tehnică' : 'Nu';
+  $('alarm').className = 'badge ' + (alarm ? 'bad' : 'good');
+  $('linkline').className = 'linkline' + (S.link ? '' : ' cut');
+  $('thresholds').textContent = 'Configurație activă: Tadv = ' + fmt(cfg.tadv, 0) + ' ms; Tci = ' + fmt(cfg.ci, 2) + ' ms; P = ' + cfg.lat +
+    '; Tto = ' + fmt(cfg.to, 0) + ' ms; Tv = 3 s; Tl = ' + fmt(2 * cfg.to / 1000, 1) + ' s. Legătura radio ' + (S.link ? 'activă' : 'PIERDUTĂ') +
+    (S.bug ? '; ATENȚIE: program cu eroare (fără restart advertising).' : '.');
+  $('scan').textContent = c.connected ? 'Telefon: deconectează' : (c.scanning ? 'Telefon: oprește scanarea' : 'Telefon: pornește scanarea');
+  $('sub').textContent = c.sub ? 'Telefon: dezabonare (CCCD 0x0000)' : 'Telefon: abonare (CCCD 0x0001)';
+  $('link').textContent = S.link ? 'Pierde legătura radio' : 'Restabilește legătura radio';
+  $('link').setAttribute('aria-pressed', String(!S.link));
+  $('power').textContent = S.on ? 'Oprește senzorul' : 'Pornește senzorul';
+  $('power').setAttribute('aria-pressed', String(!S.on));
+  if (c.last) {
+    $('lastBytes').innerHTML = byteBoxes(c.last.bytes);
+    $('payload').textContent = JSON.stringify({
+      caracteristica: '0x2A37 Heart Rate Measurement', octeti: hex(c.last.bytes), hr_bpm: c.last.hr,
+      rr_1_1024_s: c.last.rr, rr_s: Number((c.last.rr / 1024).toFixed(3)),
+      t_esantion_s: c.last.tGen / 1000, t_primire_s: c.last.tRx / 1000, sursa: 'PULS SIMULAT'
+    }, null, 2);
+  } else {
+    $('lastBytes').innerHTML = '';
+    $('payload').textContent = 'Nicio notificare primită.';
+  }
+  $('log').innerHTML = S.log.slice(-70).map(e => '<div>' + fmt(e.t / 1000, 3) + ' s · ' + esc(e.text) + '</div>').join('');
+  $('log').scrollTop = $('log').scrollHeight;
+  $('rows').innerHTML = S.rows.slice(-8).reverse().map(r =>
+    '<tr><td>' + fmt(r.tGen / 1000, 3) + '</td><td>' + fmt(r.tRx / 1000, 3) + '</td><td>' + Math.round(r.tRx - r.tGen) +
+    '</td><td>' + hex(r.bytes) + '</td><td>' + r.hr + '</td><td>' + r.rr + '</td><td>' + fmt(r.rr / 1024, 3) + '</td></tr>').join('');
+  $('sheetid').textContent = $('varcode').value + ' · ' + cfg.node + ' · ' + GEN + ' · configurație activă Tadv = ' + fmt(cfg.tadv, 0) +
+    ' ms; Tci = ' + fmt(cfg.ci, 2) + ' ms; P = ' + cfg.lat + '; Tto = ' + fmt(cfg.to, 0) + ' ms.';
+  animateRadio();
+  drawRadio();
+  drawLine('values', false);
+  drawLine('ages', true);
+}
+
+function byteBoxes(bytes) {
+  const names = ['Flags', 'HR', 'RR octet mic', 'RR octet mare'];
+  return bytes.map((b, i) => '<div class="byte ' + (i === 0 ? 'f' : i === 1 ? 'h' : '') + '">' +
+    b.toString(16).toUpperCase().padStart(2, '0') + '<small>' + (names[i] || 'octet ' + i) + '</small></div>').join('');
+}
+
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(280, cv.clientWidth), h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr);
+  c.font = '12px Arial';
+  return { c, w, h };
+}
+
+function drawRadio() {
+  const { c, w, h } = setupCanvas($('radio'));
+  const m = { l: 110, r: 14 };
+  const end = Math.max(2000, S.t), start = end - 2000;
+  const X = t => m.l + (t - start) / 2000 * (w - m.l - m.r);
+  const yA = 45, yC = 110;
+  c.fillStyle = '#000';
+  c.fillText('Advertising', 8, yA + 4);
+  c.fillText('Conexiune', 8, yC + 4);
+  c.strokeStyle = '#ddd';
+  for (let k = 0; k <= 4; k++) {
+    const t = start + k * 500, x = X(t);
+    c.beginPath(); c.moveTo(x, 20); c.lineTo(x, h - 28); c.stroke();
+    c.fillText(fmt(t / 1000, 1) + ' s', x - 14, h - 10);
+  }
+  for (const r of S.radio) {
+    if (r.t < start) continue;
+    const x = X(r.t);
+    if (r.type === 'adv') {
+      c.fillStyle = '#7c3aed';
+      for (let k = 0; k < 3; k++) c.fillRect(x - 1 + k * 3, yA - 12 + k * 8, 3, 7);
+    } else {
+      c.lineWidth = 2;
+      if (r.type === 'lost') {
+        c.strokeStyle = '#ad2424';
+        c.beginPath(); c.moveTo(x - 5, yC - 5); c.lineTo(x + 5, yC + 5); c.moveTo(x + 5, yC - 5); c.lineTo(x - 5, yC + 5); c.stroke();
+      } else {
+        c.strokeStyle = '#0e7490'; c.fillStyle = '#0e7490';
+        c.beginPath(); c.arc(x, yC, 5, 0, 2 * Math.PI);
+        if (r.type === 'skip') c.stroke(); else c.fill();
+        if (r.type === 'data') {
+          c.fillStyle = '#be185d';
+          c.beginPath(); c.arc(x, yC - 16, 4, 0, 2 * Math.PI); c.fill();
+        }
+      }
+      c.lineWidth = 1;
+    }
+  }
+}
+
+function drawLine(id, isAge) {
+  const { c, w, h } = setupCanvas($(id));
+  const m = { l: 52, r: 16, t: 24, b: 40 };
+  const W = w - m.l - m.r, H = h - m.t - m.b;
+  const end = Math.max(40000, S.t), start = Math.max(0, end - 60000);
+  const pts = S.history.filter(p => p.t >= start);
+  const max = isAge ? Math.max(2 * cfg.to * 1.25, ...pts.map(p => p.age || 0)) / 1000 : 105;
+  const min = isAge ? 0 : 55;
+  const X = t => m.l + (t - start) / (end - start) * W;
+  const Y = v => m.t + H - (v - min) / (max - min) * H;
+  c.fillStyle = '#000';
+  c.fillText(isAge ? 'Vechime (s)' : 'Puls HR (bpm)', m.l, 15);
+  for (let i = 0; i <= 4; i++) {
+    const v = min + i * (max - min) / 4, y = Y(v);
+    c.strokeStyle = '#e3e3e3'; c.beginPath(); c.moveTo(m.l, y); c.lineTo(w - m.r, y); c.stroke();
+    c.fillText(v.toFixed(isAge ? 1 : 0), 5, y + 4);
+  }
+  for (let i = 0; i <= 4; i++) {
+    const t = start + i * (end - start) / 4;
+    c.fillText((t / 1000).toFixed(0), X(t) - 7, h - 20);
+  }
+  c.fillText('Timp model (s)', w - 110, h - 4);
+  function line(key, color, stairs, scale) {
+    c.strokeStyle = color; c.lineWidth = 2; c.beginPath();
+    let prev = null;
+    for (const p of pts) {
+      if (p[key] === null || p[key] === undefined) { prev = null; continue; }
+      const x = X(p.t), y = Y(p[key] / scale);
+      if (!prev) c.moveTo(x, y);
+      else { if (stairs) c.lineTo(x, prev.y); c.lineTo(x, y); }
+      prev = { x, y };
+    }
+    c.stroke();
+  }
+  if (isAge) {
+    for (const [v, color] of [[T_VECHI / 1000, '#996d00'], [2 * cfg.to / 1000, '#ad2424']]) {
+      c.strokeStyle = color; c.setLineDash([4, 4]);
+      c.beginPath(); c.moveTo(m.l, Y(v)); c.lineTo(w - m.r, Y(v)); c.stroke();
+    }
+    c.setLineDash([]);
+    line('age', '#000', false, 1000);
+  } else {
+    line('src', '#0e7490', false, 1);
+    line('rx', '#be185d', true, 1);
+  }
+}
+
+function decodeInput(text) {
+  const parts = text.trim().split(/[\s,:;-]+/).filter(Boolean);
+  if (!parts.length) throw new Error('Scrieți cel puțin doi octeți, de exemplu 16 48 0A 03.');
+  return parts.map(p => {
+    const q = p.replace(/^0x/i, '');
+    if (!/^[0-9a-fA-F]{1,2}$/.test(q)) throw new Error('„' + p + '” nu este un octet hexazecimal (00…FF).');
+    return parseInt(q, 16);
+  });
+}
+
+function showDecode() {
+  try {
+    const bytes = decodeInput($('hexIn').value);
+    const d = decodeHR(bytes);
+    const bits = d.flags.toString(2).padStart(8, '0');
+    const rows = [
+      ['Flags', '0x' + d.flags.toString(16).toUpperCase().padStart(2, '0') + ' = ' + bits + '₂'],
+      ['bit 0 – format HR', d.hr16 ? '1 → HR pe 16 biți (uint16, little-endian)' : '0 → HR pe 8 biți (uint8)'],
+      ['biții 1–2 – contact', ['00 → nu este suportat', '01 → nu este suportat', '10 → suportat, nedetectat', '11 → suportat și detectat'][d.contact]],
+      ['bit 3 – Energie', d.energyPresent ? '1 → câmp Energie prezent (2 octeți, kJ)' : '0 → fără Energie'],
+      ['bit 4 – RR', d.rrPresent ? '1 → urmează intervale RR' : '0 → fără RR'],
+      ['HR', d.hr + ' bpm'],
+    ];
+    if (d.energyPresent) rows.push(['Energie cheltuită', d.energy + ' kJ']);
+    d.rr.forEach((r, i) => rows.push(['RR' + (i + 1), r + '/1024 s = ' + fmt(r / 1024, 3) + ' s → 60/RR = ' + fmt(60 * 1024 / r, 1) + ' bpm']));
+    $('decTable').innerHTML = rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>').join('');
+    $('decBytes').innerHTML = bytes.map((b, i) => '<div class="byte ' + (i === 0 ? 'f' : '') + '">' + b.toString(16).toUpperCase().padStart(2, '0') + '<small>octet ' + i + '</small></div>').join('');
+    $('decMsg').textContent = 'Decodare reușită: ' + bytes.length + ' octeți.';
+  } catch (e) {
+    $('decTable').innerHTML = ''; $('decBytes').innerHTML = '';
+    $('decMsg').textContent = 'Eroare: ' + e.message;
+  }
+}
+
+function save(name, text, type = 'text/plain;charset=utf-8') {
+  const a = document.createElement('a'), u = URL.createObjectURL(new Blob([text], { type }));
+  a.href = u; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+}
+
+function csv() {
+  const head = ['CODE', 'VERSION', 'N', 'data_ora', 'tip', 'Tadv_ms', 'Tci_ms', 'P', 'Tto_ms', 't_esantion_s', 't_primire_s', 'intarziere_ms', 'octeti_hex', 'hr_bpm', 'rr_1_1024_s', 'rr_s', 'eveniment'];
+  const when = new Date().toISOString();
+  const base = [CODE, VERSION, cfg.n, when, 'SIMULARE', cfg.tadv, cfg.ci, cfg.lat, cfg.to];
+  const rows = [head];
+  for (const r of S.rows) rows.push([...base, r.tGen / 1000, r.tRx / 1000, Math.round(r.tRx - r.tGen), hex(r.bytes), r.hr, r.rr, (r.rr / 1024).toFixed(4), 'NOTIFICARE']);
+  for (const e of S.log) rows.push([...base, '', e.t / 1000, '', '', '', '', '', e.text]);
+  save('SMMeH_L06_N' + String(cfg.n).padStart(2, '0') + '_SIMULARE.csv',
+    '﻿' + rows.map(r => r.map(x => '"' + String(x).replaceAll('"', '""') + '"').join(';')).join('\r\n'), 'text/csv;charset=utf-8');
+}
+
+function firmwareText() {
+  return $('firmware').textContent.replace(/^\n/, '');
+}
+
+// ===== EVENIMENTE =====
+$('variant').onclick = applyVariant;
+$('example').onclick = () => { $('index').value = N_EXEMPLU; applyVariant(); };
+for (const id of ['tadv', 'ci', 'lat', 'to', 'autosub', 'bug']) $(id).onchange = reset;
+$('play').onclick = () => { playing = !playing; lastFrame = 0; $('play').textContent = playing ? 'Pauză' : 'Continuă'; };
+$('stepSmall').onclick = () => { playing = false; $('play').textContent = 'Continuă'; advance(75); };
+$('step').onclick = () => { playing = false; $('play').textContent = 'Continuă'; advance(1000); };
+$('reset').onclick = reset;
+$('scan').onclick = () => { cmdScan(S); render(); };
+$('sub').onclick = () => { cmdSub(S); render(); };
+$('link').onclick = () => { cmdLink(S); render(); };
+$('power').onclick = () => { cmdPower(S); render(); };
+$('reboot').onclick = () => { cmdReboot(S); render(); };
+$('csv').onclick = csv;
+$('print').onclick = () => window.print();
+$('decode').onclick = showDecode;
+$('hexIn').addEventListener('keydown', e => { if (e.key === 'Enter') showDecode(); });
+$('useLast').onclick = () => {
+  if (S && S.cen.last) { $('hexIn').value = hex(S.cen.last.bytes); showDecode(); }
+  else $('decMsg').textContent = 'Nu există încă o notificare primită în simulator.';
+};
+$('downloadFw').onclick = () => save('SMMeH_L06_Senzor_BLE.ino', firmwareText());
+window.addEventListener('resize', render);
+
+function frame(now) {
+  if (playing) {
+    if (lastFrame) {
+      const dt = Math.min(now - lastFrame, 200) * Number($('speed').value);
+      acc += dt;
+      if (acc >= 25) { runTo(S, S.t + Math.floor(acc / 25) * 25); acc %= 25; render(); }
+    }
+    lastFrame = now;
+  } else { lastFrame = 0; acc = 0; }
+  requestAnimationFrame(frame);
+}
+
+applyVariant();
+showDecode();
+if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) playing = false;
+requestAnimationFrame(frame);
+window.SMMeH = { advance, reset, state: () => S, config: () => cfg, decodeHR, variant };
+</script>
+</main>
+</body>
+</html>
