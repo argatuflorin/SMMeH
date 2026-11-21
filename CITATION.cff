@@ -8,6 +8,7 @@ authors:
     orcid: "https://orcid.org/0000-0003-0606-6273"
     affiliation: "National University of Science and Technology POLITEHNICA Bucharest, Faculty of Electrical Engineering, DMAECS"
     email: florin.argatu@upb.ro
+doi: 10.5281/zenodo.24411937
 repository-code: "https://github.com/argatuflorin/SMMeH"
 license: CC-BY-NC-ND-4.0
 abstract: "Laboratoare interactive pentru disciplina Sisteme de măsurare și monitorizare e-health folosind tehnologii IoT: aplicații HTML, îndrumare și exemple ESP32 (UPB)."
