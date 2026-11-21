@@ -20,3 +20,12 @@ Adresele vechi `L01/SMMeH_L01_ESP32.html` și `C05/SMMeH_C05_Comunicatie_ESP32.h
 Aplicațiile HTML sunt autonome și se pot deschide local. Nu se conectează la ESP32 și nu transmit note. În `L01/Programe_N07` este exemplul N07 pentru ESP32 WROOM și ESP32-S3.
 
 Îndrumarele (PDF), listele nominale, notele, quizurile cu răspunsuri și reperele profesorului nu sunt publicate aici; se află în Moodle, respectiv în Drive (nepublic).
+
+<!-- licenta-citare -->
+## Licență și citare
+
+© 2026 Florin-Ciprian Argatu ([ORCID 0000-0003-0606-6273](https://orcid.org/0000-0003-0606-6273)), DMAECS – Universitatea Națională de Știință și Tehnologie POLITEHNICA București, Facultatea de Inginerie Electrică.
+
+Materialul este publicat sub licența [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/): poate fi distribuit cu citarea autorilor, doar în scop necomercial și fără versiuni modificate. Detalii în [`LICENSE`](LICENSE).
+
+**Citare:** folosiți butonul *Cite this repository* (dreapta sus, generat din [`CITATION.cff`](CITATION.cff)). DOI-ul permanent (Zenodo) se adaugă la primul release.
