@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMMeH · L07 · Puls și stare prin MQTT</title>
+<style>
+:root {
+  --v: #0e7490; --p: #ecfeff; --teal: #be185d; --line: #cfe4e8;
+  --adv: #7c3aed; --ok: #26713c; --old: #996d00; --bad: #ad2424;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #fff; color: #000; font: 16px/1.65 system-ui, Arial, sans-serif; }
+main { max-width: 1160px; margin: auto; padding: 30px 24px 65px; }
+h1 { font-size: clamp(28px, 4vw, 43px); line-height: 1.17; margin: 14px 0; }
+h2 { font-size: 25px; margin: 0 0 16px; }
+h3 { font-size: 19px; }
+header { padding: 28px 0; border-bottom: 3px solid var(--v); }
+.eyebrow { font-size: 13px; font-weight: 750; letter-spacing: .08em; }
+.lead { max-width: 850px; font-size: 18px; }
+nav { display: flex; gap: 10px; flex-wrap: wrap; margin: 22px 0; }
+nav a { padding: 7px 12px; background: var(--p); text-decoration: none; border-radius: 7px; color: #000; }
+section { padding: 28px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 15px; }
+.note { padding: 14px 18px; background: var(--p); border-radius: 10px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.controlgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+label { display: block; font-size: 14px; font-weight: 650; }
+label.inline { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+label.inline input { width: auto; display: inline; }
+input, select { display: block; width: 100%; padding: 10px; border: 1px solid #aaa; border-radius: 6px; background: white; font: inherit; }
+button { font: 600 14px system-ui; padding: 11px 15px; background: var(--p); border: 1px solid var(--v); border-radius: 7px; cursor: pointer; color: #000; }
+button:hover { background: #cffafe; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+button[aria-pressed=true] { border-width: 3px; background: #eee; }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; align-items: end; }
+.muted { font-size: 14px; }
+.card { padding: 18px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.metric { padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.metric b { display: block; font-size: 21px; }
+.diagram { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 50px; padding: 30px 15px; background: var(--p); border-radius: 12px; margin: 20px 0; }
+.node { position: relative; z-index: 2; background: #fff; border: 2px solid var(--v); padding: 18px; border-radius: 12px; text-align: center; }
+.node.rx { border-color: var(--teal); }
+.node.gw { border-style: dashed; border-color: #777; }
+.node strong { display: block; font-size: 20px; }
+.node small { display: block; }
+.linkline { position: absolute; height: 3px; background: var(--v); left: 20%; right: 20%; top: 50%; }
+.linkline.cut { background: repeating-linear-gradient(90deg, var(--bad) 0 10px, transparent 10px 18px); }
+.packet { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--v); top: calc(50% - 6px); left: 22%; animation: travel .7s linear forwards; z-index: 3; }
+.packet.adv { background: var(--adv); border-radius: 2px; }
+@keyframes travel { to { left: 48%; } }
+.badge { display: inline-block; font-size: 15px; font-weight: 700; padding: 6px 10px; border-radius: 6px; background: #eee; }
+.good { background: #e1f3e5; border: 1px solid var(--ok); }
+.old { background: #fff0cc; border: 1px solid var(--old); }
+.bad { background: #ffe3e3; border: 1px solid var(--bad); }
+.chart { width: 100%; height: 285px; display: block; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+.chart.radio { height: 170px; }
+.tablewrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+th, td { border: 1px solid #d9d9d9; padding: 9px; text-align: left; }
+th { background: var(--p); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f7f7f7; padding: 15px; border: 1px solid #ddd; font: 14px/1.55 ui-monospace, Consolas, monospace; }
+.bytes { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.byte { font: 700 20px ui-monospace, Consolas, monospace; padding: 8px 12px; border: 2px solid var(--v); border-radius: 8px; background: #fff; text-align: center; }
+.byte small { display: block; font: 12px system-ui; }
+.byte.f { border-color: var(--adv); }
+.byte.h { border-color: var(--teal); }
+details { margin: 12px 0; border: 1px solid var(--line); padding: 14px; border-radius: 8px; }
+summary { cursor: pointer; font-weight: 700; }
+.formula { text-align: center; margin: 15px 0; font-family: Georgia, serif; font-size: 18px; }
+.formula span { float: right; font-size: 14px; }
+.log { height: 165px; overflow: auto; font: 13px/1.6 ui-monospace, monospace; background: #fafafa; padding: 12px; border: 1px solid var(--line); }
+.steps li { margin-bottom: 12px; }
+.printsheet { display: none; }
+footer { padding-top: 25px; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+  .controlgrid, .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .diagram { gap: 12px; padding: 18px 5px; }
+  .node { padding: 9px; font-size: 13px; }
+  .node strong { font-size: 15px; }
+  main { padding: 15px; }
+  .chart { height: 250px; }
+}
+@media print {
+  nav, .buttons, .log, details, .noprint { display: none !important; }
+  main { max-width: none; padding: 0; font-size: 11pt; }
+  header { padding: 10px 0; }
+  h1 { font-size: 22pt; }
+  .printsheet { display: block; }
+  .card, .diagram, .metrics { break-inside: avoid; }
+  .chart { height: 200px; }
+  footer { font-size: 9pt; }
+}
+@media (prefers-reduced-motion: reduce) { .packet { animation: none; display: none; } }
+.diagram3 { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 26px; padding: 24px 15px; background: var(--p); border-radius: 12px; margin: 20px 0; align-items: center; }
+.diagram3 .col { display: grid; gap: 14px; }
+.diagram3 .col.mid { grid-template-columns: 1fr; position: relative; }
+.node.broker { border-color: #b45309; background: #fff7ed; }
+.wire { position: relative; height: 4px; background: var(--v); border-radius: 2px; }
+.wire.cut { background: repeating-linear-gradient(90deg, var(--bad) 0 10px, transparent 10px 18px); }
+.mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.93em; }
+.controlgrid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 10px; }
+.card label { margin-top: 8px; }
+.filebtn { display: inline-block; font: 600 14px system-ui; padding: 11px 15px; background: var(--p); border: 1px solid var(--v); border-radius: 7px; cursor: pointer; }
+.filebtn input { display: none; }
+.sheetin { padding: 6px; font-size: 14px; }
+.dot { position: absolute; top: -6px; left: 0; width: 15px; height: 15px; border-radius: 50%; background: var(--v); animation: slide .6s linear forwards; }
+.dot.w { background: var(--bad); }
+@keyframes slide { to { left: calc(100% - 15px); } }
+@media (prefers-reduced-motion: reduce) { .dot { display: none; } }
+@media (max-width: 760px) { .diagram3 { grid-template-columns: 1fr; } }
+@media print { .sheetin { border: none; border-bottom: 1px solid #999; } }
+</style>
+<meta name="author" content="Florin-Ciprian Argatu"><meta name="copyright" content="© 2026 Florin-Ciprian Argatu – CC BY-NC-ND 4.0"><link rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/"></head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">SMMeH · L07 · MASTERAT TIMM · ÎNSOȚEȘTE CURSUL C07</div>
+  <h1>Puls și stare transmise prin MQTT</h1>
+  <p class="lead">Sisteme de măsurare și monitorizare e-health folosind tehnologii IoT</p>
+  <p>ESP32 ca publisher MQTT: topicuri, filtre, QoS 0 și 1, mesaj reținut, testament (LWT), keep alive și vechimea datelor la monitor.</p>
+  <p>Florin Ciprian Argatu</p>
+  <div class="note"><b>Laborator virtual — puls SIMULAT, broker SIMULAT.</b> Acest fișier nu se conectează la ESP32 și nu deschide nicio conexiune de rețea. Brokerul, întârzierile (40 ms senzor–broker, 20 ms broker–abonați) și pierderile sunt modelate. Experimentele fizice se fac separat, cu programul inclus și cu brokerul Mosquitto din laborator. Valorile nu sunt măsurări fiziologice și nu se folosesc pentru decizii clinice.</div>
+</header>
+
+<nav aria-label="Cuprins">
+  <a href="#sistem">1. Sistem</a>
+  <a href="#parametri">2. Varianta N</a>
+  <a href="#experiment">3. Simulator</a>
+  <a href="#calcul">4. Pachet și filtre</a>
+  <a href="#interpretare">5. Explicații</a>
+  <a href="#ghid">6. Experimente</a>
+  <a href="#montaj">7. ESP32 real</a>
+  <a href="#fisa">8. Fișă</a>
+</nav>
+
+<section id="sistem">
+  <h2>1. Cine publică, cine distribuie, cine primește</h2>
+  <div class="grid">
+    <div>
+      <p><b>Senzorul (ESP32)</b> este <b>client MQTT</b> și <b>publisher</b>. Se conectează la broker cu ClientId <span class="mono" id="cidText">smmeh-pat07</span>, declară în CONNECT testamentul „offline” (reținut) și publică imediat „online” (reținut) pe topicul de stare. Apoi publică pulsul în JSON la fiecare T<sub>pub</sub> secunde.</p>
+      <p><b>Brokerul</b> (Mosquitto) este singurul server. Compară fiecare topic publicat cu filtrele abonaților, păstrează ultimul mesaj reținut pe fiecare topic și publică testamentul când un client dispare fără DISCONNECT.</p>
+    </div>
+    <div>
+      <p><b>Monitorul asistentei</b> este client și <b>subscriber</b>, cu sesiune curată. Filtrul lui se alege în simulator. Calculează vechimea ultimei valori din momentul primirii (fără să scadă ceasuri diferite, ca în L05).</p>
+      <p><b>Serviciul de alarmă</b> este subscriber pe <span class="mono">smmeh/+/puls</span>, cu sesiune persistentă și QoS 1. Declanșează alarma când pulsul depășește pragul variantei. Mai publică, din când în când, un pacient vecin și un termometru de salon, ca filtrele să aibă ce alege.</p>
+    </div>
+  </div>
+  <div class="diagram3" id="diagram">
+    <div class="col">
+      <div class="node"><strong>ESP32 senzor</strong><small>publisher · <span id="cidNode">smmeh-pat07</span></small><b id="txDisplay">—</b><small id="senState">Pornire</small></div>
+      <div class="node gw"><strong>Alți publisheri</strong><small id="othersText">smmeh/pat08/puls · smmeh/salon3/temp</small></div>
+    </div>
+    <div class="col mid">
+      <div class="wire" id="wireIn"></div>
+      <div class="node broker"><strong>Broker</strong><small>Mosquitto (simulat)</small><b id="brkDisplay">—</b><small id="brkState">—</small></div>
+      <div class="wire out" id="wireOut"></div>
+    </div>
+    <div class="col">
+      <div class="node rx"><strong>Monitor</strong><small id="monFilterText">smmeh/pat07/#</small><b id="rxDisplay">—</b><small id="monState">—</small></div>
+      <div class="node rx"><strong>Serviciu alarmă</strong><small>smmeh/+/puls · QoS 1 · sesiune persistentă</small><b id="alDisplay">—</b><small id="alState">—</small></div>
+    </div>
+  </div>
+</section>
+
+<section id="parametri">
+  <h2>2. Fișa individuală după indicele N</h2>
+  <p>N este numărul vostru din lista grupei. Aceeași valoare N dă întotdeauna aceleași date. Resetarea simulării nu schimbă varianta.</p>
+  <div class="controlgrid">
+    <label>Disciplina<input id="group" value="SMMeH" readonly></label>
+    <label>Indice N<input id="index" type="number" min="1" max="42" value="7"></label>
+    <label>ClientId<input id="cid" readonly></label>
+    <label>Cod variantă<input id="varcode" readonly></label>
+  </div>
+  <div class="buttons">
+    <button id="variant">Aplică varianta N și resetează</button>
+    <button id="example">Exemplul N = 7</button>
+    <button id="print">Tipărește fișa</button>
+  </div>
+  <p id="validation" role="status"></p>
+  <div class="tablewrap"><table><tbody id="varTable"></tbody></table></div>
+</section>
+
+<section id="experiment">
+  <h2>3. Simulatorul brokerului MQTT</h2>
+  <p>Timpul modelului avansează în pași de 10 ms. Pauza îngheață tot modelul. Comenzile acționează în momentul curent al modelului.</p>
+  <div class="controlgrid">
+    <label>QoS la publicarea pulsului<select id="qos"><option value="0" selected>0 (ca PubSubClient)</option><option value="1">1 (cu PUBACK)</option></select></label>
+    <label>Filtrul monitorului<select id="filter"></select></label>
+    <label>Prag date învechite la monitor (s)<input id="stale" readonly></label>
+    <label>Prag alarmă puls (bpm)<input id="hrmax" readonly></label>
+  </div>
+  <div class="buttons">
+    <label class="inline"><input type="checkbox" id="retainPuls"> Pulsul publicat cu RETAIN</label>
+    <label class="inline"><input type="checkbox" id="offlineFirst" checked> Publică „offline” înainte de DISCONNECT</label>
+  </div>
+  <div class="buttons">
+    <button id="play">Pornește</button>
+    <button id="stepSmall">+0,5 s</button>
+    <button id="step">+5 s</button>
+    <button id="reset">Resetează</button>
+    <label>Viteză<select id="speed"><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="4">4×</option><option value="10">10×</option></select></label>
+  </div>
+  <div class="buttons">
+    <button id="wifi" aria-pressed="false">Senzor: pierde Wi-Fi</button>
+    <button id="power" aria-pressed="false">Senzor: bateria cedează</button>
+    <button id="reboot">Senzor: repornește</button>
+    <button id="disc">Senzor: oprire normală (DISCONNECT)</button>
+    <button id="ackloss">Pierde următorul PUBACK</button>
+    <button id="mon" aria-pressed="false">Monitor: deconectează</button>
+    <button id="alarm" aria-pressed="false">Alarmă: deconectează</button>
+  </div>
+  <div class="metrics">
+    <div class="metric">Timp model<b id="clock">0,00 s</b></div>
+    <div class="metric">Starea datelor la monitor<b id="status" class="badge">Nicio valoare</b></div>
+    <div class="metric">Vechime la monitor<b id="age">—</b></div>
+    <div class="metric">Stare reținută (topic stare)<b id="retState">—</b></div>
+    <div class="metric">PUBLISH puls trimise<b id="nSent">0</b></div>
+    <div class="metric">Primite la monitor / duplicate<b id="nRecv">0 / 0</b></div>
+    <div class="metric">Ultimul pachet de la senzor la broker<b id="lastRx">—</b></div>
+    <div class="metric">Alarme de puls<b id="nAlarm">0</b></div>
+  </div>
+  <p id="thresholds" class="muted"></p>
+  <h3>Pachetele din ultimele 12 secunde</h3>
+  <p class="muted">Rândul de sus: senzor ↔ broker. Mijloc: broker → monitor. Jos: broker → alarmă. P = PUBLISH, A = PUBACK, I = PINGREQ/PINGRESP, C = CONNECT/CONNACK, W = testament, D = DISCONNECT, × = pierdut.</p>
+  <canvas id="packets" class="chart radio" role="img" aria-label="Cronograma pachetelor MQTT"></canvas>
+  <div class="grid">
+    <div class="card">
+      <h3>Pulsul la senzor și la monitor</h3>
+      <p class="muted">Turcoaz continuu: HR(t) la senzor. Roșu-zmeură în trepte: ultima valoare primită de monitor (bpm).</p>
+      <canvas id="values" class="chart" role="img" aria-label="Pulsul simulat și valoarea primită"></canvas>
+    </div>
+    <div class="card">
+      <h3>Vechimea la monitor</h3>
+      <p class="muted">Linia punctată ocru: pragul 3·T<sub>pub</sub>. Linia punctată roșie: 1,5·K, limita brokerului.</p>
+      <canvas id="ages" class="chart" role="img" aria-label="Vechimea datelor la monitor"></canvas>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h3>Ultimul mesaj primit de monitor</h3>
+      <pre id="payload">Niciun mesaj.</pre>
+    </div>
+    <div class="card">
+      <h3>Jurnalul evenimentelor</h3>
+      <div id="log" class="log" aria-label="Jurnal cronologic"></div>
+    </div>
+  </div>
+  <h3>Mesaje primite de monitor (ultimele 12)</h3>
+  <div class="tablewrap">
+    <table><thead><tr><th>t primire (s)</th><th>Topic</th><th>QoS</th><th>Retain</th><th>DUP</th><th>seq</th><th>Conținut</th><th>Octeți PUBLISH</th></tr></thead>
+    <tbody id="rows"></tbody></table>
+  </div>
+  <div class="buttons"><button id="csv">Exportă CSV simulare</button></div>
+</section>
+
+<section id="calcul">
+  <h2>4. Calculatorul pachetului PUBLISH și testerul de filtre</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Pachetul PUBLISH (MQTT 3.1.1)</h3>
+      <label>Topic<input id="cTopic" value="smmeh/pat07/puls"></label>
+      <label>Payload (text)<input id="cPayload" value='{"seq":1,"t":2,"hr":76.0,"u":"bpm"}'></label>
+      <div class="controlgrid two">
+        <label>QoS<select id="cQos"><option>0</option><option>1</option><option>2</option></select></label>
+        <label class="inline"><input type="checkbox" id="cRetain"> RETAIN</label>
+      </div>
+      <div class="buttons"><button id="cCalc">Calculează</button><button id="cLast">Ultimul PUBLISH al senzorului</button></div>
+      <div class="bytes" id="cBytes"></div>
+      <div class="tablewrap"><table><tbody id="cTable"></tbody></table></div>
+      <p id="cMsg" role="status" class="muted"></p>
+    </div>
+    <div class="card">
+      <h3>Testerul de filtre (secț. 4.7 din specificație)</h3>
+      <label>Filtru (la abonare)<input id="fFilter" value="smmeh/+/puls"></label>
+      <label>Topic (la publicare)<input id="fTopic" value="smmeh/pat07/puls"></label>
+      <div class="buttons"><button id="fTest">Verifică</button></div>
+      <p id="fMsg" role="status" class="badge">—</p>
+      <p class="muted">Reguli: „/” separă nivelurile; „+” ține locul unui nivel întreg; „#” ține locul oricâtor niveluri (și zero), doar la final; un filtru care începe cu „+” sau „#” nu prinde topicurile care încep cu „$”. Literele mari și mici contează.</p>
+    </div>
+  </div>
+</section>
+
+<section id="interpretare">
+  <h2>5. Ce se poate deduce din date</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Varianta și pachetul</h3>
+      <div class="formula">T<sub>pub</sub> = 1 + (N mod 3) [s] · K = 10 + 5·(N mod 4) [s] <span>(1)</span></div>
+      <div class="formula">HR(t<sub>u</sub>) = 70 + 0,5·N + 8·sin(2π·t<sub>u</sub>/40) [bpm] <span>(2)</span></div>
+      <div class="formula">L<sub>PUBLISH</sub> = 2 + (2 + L<sub>topic</sub> + 2·[QoS ≥ 1] + L<sub>payload</sub>) [octeți] <span>(3)</span></div>
+      <p>Relația (3) e valabilă cât timp lungimea rămasă este sub 128 octeți (se codează pe un singur octet). Peste 127, lungimea rămasă ocupă 2 octeți. La QoS 1 se adaugă un PUBACK de 4 octeți în sens invers.</p>
+      <div class="formula">M<sub>h</sub> = 3600 / T<sub>pub</sub> [mesaje/oră] <span>(4)</span></div>
+    </div>
+    <div class="card">
+      <h3>Vechime, keep alive și testament</h3>
+      <div class="formula">date învechite: vechime &gt; 3·T<sub>pub</sub> <span>(5)</span></div>
+      <div class="formula">t<sub>LWT</sub> ≤ t<sub>ultim pachet la broker</sub> + 1,5·K <span>(6)</span></div>
+      <p>Vechimea se măsoară la monitor din momentul primirii, cu ceasul monitorului. Testamentul semnalează pierderea conexiunii; vechimea semnalează lipsa datelor, oricare ar fi cauza. Senzorul care publică la fiecare T<sub>pub</sub> &lt; K nu trimite PINGREQ: publicările țin conexiunea vie.</p>
+      <p>Prag de alarmă (regula laboratorului): HR &gt; 76 + 0,5·N bpm. La QoS 1 un duplicat se recunoaște după seq.</p>
+    </div>
+  </div>
+  <details>
+    <summary>De ce PubSubClient publică doar la QoS 0</summary>
+    <p>Biblioteca folosită pe placă publică numai la QoS 0 și se abonează la QoS 0 sau 1 (README-ul bibliotecii). Opțiunea QoS 1 din simulator arată ce face protocolul cu PUBACK; pe placă puteți vedea QoS 1 doar cu mosquitto_pub -q 1 sau cu altă bibliotecă.</p>
+  </details>
+</section>
+
+<section id="ghid">
+  <h2>6. Experimente ghidate</h2>
+  <p>Scrieți predicția înainte să porniți. Notați momentele din jurnal (timpul modelului).</p>
+  <ol class="steps">
+    <li><b>Conectare și primele mesaje.</b> Aplicați varianta N și avansați cu „+0,5 s”. Notați CONNECT, CONNACK, publicarea „online” reținută și primul PUBLISH de puls. Comparați octeții PUBLISH din tabel cu relația (3).</li>
+    <li><b>Filtrele.</b> Schimbați filtrul monitorului (cinci variante). Pentru fiecare, rulați 10 s și notați ce topicuri ajung. Explicați de ce smmeh/+ nu primește nimic și de ce smmeh/# primește și termometrul.</li>
+    <li><b>Monitorul întârzie (mesajul reținut).</b> Deconectați monitorul, așteptați 10 s, reconectați-l. Ce primește imediat? Repetați cu bifa „Pulsul publicat cu RETAIN”. Ce informație lipsește din valoarea reținută și de ce contează vechimea?</li>
+    <li><b>Wi-Fi pierdut (testamentul).</b> Resetați. La t = 11 s apăsați „Senzor: pierde Wi-Fi”. Notați: ultimul pachet la broker, momentul „date învechite” la monitor, momentul testamentului „offline”. Comparați cu relațiile (5) și (6). Restabiliți Wi-Fi și notați reconectarea.</li>
+    <li><b>Oprire normală.</b> Resetați, debifați „Publică offline înainte de DISCONNECT” și apăsați „oprire normală”. Ce arată starea reținută? De ce nu s-a publicat testamentul? Repetați cu bifa activă.</li>
+    <li><b>QoS 1 și duplicatul.</b> Alegeți QoS 1, apoi „Pierde următorul PUBACK”. Urmăriți retransmisia cu DUP = 1 și duplicatul la monitor. Apoi deconectați serviciul de alarmă 10 s: ce primește la reconectare cu QoS 0 și ce cu QoS 1?</li>
+  </ol>
+  <div class="note" id="exampleNote"></div>
+</section>
+
+<section id="montaj">
+  <h2>7. Trecerea la ESP32 real și brokerul de laborator</h2>
+  <p>Programul este pentru plăci ESP32 cu pachetul Arduino-ESP32 și biblioteca <b>PubSubClient</b> (Nick O'Leary, licență MIT, instalată din Library Manager). Nu folosește senzori; pulsul este simulat. <b>Codul nu a fost compilat și nu a fost testat pe placă de autorul aplicației</b>: la prima rulare urmăriți Serial Monitor.</p>
+  <ol class="steps">
+    <li>În Arduino IDE instalați PubSubClient din Library Manager. Selectați placa și portul.</li>
+    <li>În fișierul descărcat completați N. Topicurile, ClientId, T<sub>pub</sub> și K se calculează din N.</li>
+    <li>Creați lângă program fișierul <b>secrets.h</b> cu datele primite la laborator (rețeaua Wi-Fi, adresa brokerului, utilizatorul și parola MQTT). Nu îl puneți în raport și nu îl urcați pe GitHub.</li>
+    <li>Pe calculator, în prima fereastră, abonați-vă la topicurile voastre (comanda de mai jos, cu datele de laborator). Încărcați programul și comparați mesajele cu Serial Monitor.</li>
+    <li>Deconectați alimentarea plăcii. Notați după cât timp apare „offline” în fereastra mosquitto_sub. Comparați cu 1,5·K.</li>
+    <li>Reconectați placa. Deschideți o a doua fereastră mosquitto_sub pe topicul de stare: ce primește imediat (mesajul reținut)?</li>
+  </ol>
+  <pre id="subCmd"></pre>
+  <div class="buttons"><button id="downloadFw">Descarcă programul senzorului</button><button id="downloadSecrets">Descarcă modelul secrets.h</button></div>
+  <p class="muted">Programul descărcat conține N din varianta aplicată. Simulatorul nu rescrie restul programului. PubSubClient publică doar la QoS 0; dimensiunea maximă implicită a mesajului este 256 de octeți, suficient pentru JSON-ul laboratorului.</p>
+  <details>
+    <summary>Dacă nu funcționează</summary>
+    <ul>
+      <li>„MQTT rc = 5” în Serial Monitor: utilizator sau parolă greșite (conexiune neautorizată).</li>
+      <li>„MQTT rc = -2”: brokerul nu se poate atinge (adresă, port, rețea).</li>
+      <li>Nu apare nimic în mosquitto_sub: verificați topicul (literele mari și mici contează) și dreptul de citire (ACL).</li>
+      <li>Două plăci cu același N: se deconectează reciproc (ClientId identic).</li>
+    </ul>
+  </details>
+</section>
+
+<section id="fisa">
+  <h2>8. Fișa individuală și predarea</h2>
+  <p id="sheetid"></p>
+  <div class="printsheet">Nume și prenume: ____________________ Grupa: ________ Data: __________</div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Mărime</th><th>Relația</th><th>Calculat</th><th>Simulator</th><th>ESP32 + broker</th></tr></thead>
+      <tbody id="sheetRows"></tbody>
+    </table>
+  </div>
+  <div class="buttons noprint">
+    <button id="sheetJson">Exportă fișa (JSON)</button>
+    <label class="filebtn">Importă fișa (JSON)<input type="file" id="sheetImport" accept=".json,application/json"></label>
+    <button id="sheetClear">Golește fișa</button>
+  </div>
+  <p id="sheetMsg" role="status" class="muted"></p>
+  <p><b>Folosire:</b> laboratorul L07 însoțește cursul C07 (MQTT în e-health). Cerințele de predare, capturile și evaluarea sunt cele din îndrumarul L07. Menționați explicit probele neexecutate. Nu înlocuiți o probă fizică printr-o captură de simulator.</p>
+  <p><b>Întrebări:</b> 1. De ce senzorul și monitorul sunt amândoi clienți? 2. Ce primește un abonat nou dacă pulsul NU este reținut? 3. De ce testamentul nu se publică la DISCONNECT? 4. Cine anunță primul o problemă: vechimea sau testamentul, și de ce? 5. De ce la QoS 1 poate apărea un duplicat și cum îl recunoașteți? 6. De ce nu punem numele pacientului în topic?</p>
+</section>
+
+<footer>
+  <b>Referințe</b><br>
+  Argatu F. C. SMMeH_C07_MQTT_eHealth (curs), v1.0, 2026; SMMeH_L05_Comunicatie_HTTP și SMMeH_L06_Puls_BLE (aplicații), v1.0.<br>
+  OASIS — MQTT Version 3.1.1, OASIS Standard, 29.10.2014: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html<br>
+  HiveMQ — MQTT Essentials: https://www.hivemq.com/mqtt/<br>
+  Eclipse Mosquitto — mosquitto.conf(5), mosquitto_sub(1), mosquitto_pub(1): https://mosquitto.org/man/<br>
+  N. O'Leary — PubSubClient (MIT): https://github.com/knolleary/pubsubclient<br>
+  F. C. Argatu · SMMeH · 2026–2027 · SMMeH_L07_MQTT_Puls_v1.0 · Aplicația nu transmite note și nu identifică studentul.
+</footer>
+
+<script id="firmware" type="text/plain">
+// SMMeH-MQTT-1.0 - ESP32 publisher MQTT: puls SIMULAT (bpm) + stare online/offline (testament).
+// Material didactic. Nu este dispozitiv medical; valorile nu sunt masurari fiziologice.
+// Placa: ESP32 / ESP32-S3 / ESP32-C3, pachetul Arduino-ESP32; biblioteca PubSubClient (N. O'Leary, licenta MIT).
+// Codul nu a fost compilat si nu a fost testat pe placa de autor: verificati la prima rulare.
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <math.h>
+#include "secrets.h"   // WIFI_SSID, WIFI_PASS, MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS - NU se publica
+
+const uint8_t N = 7;                              // indicele N din lista SMMeH: 1..42
+const uint32_t TPUB_MS = 1000UL * (1 + N % 3);    // perioada de publicare
+const uint16_t KA_S    = 10 + 5 * (N % 4);        // keep alive [s]
+
+char T_PULS[32], T_STARE[32], CLIENT_ID[24];
+WiFiClient net;
+PubSubClient mqtt(net);
+uint32_t bootMs = 0, tNext = 0, tMqtt = 0, tWifi = 0, seq = 0;
+
+// HR(t) = 70 + N/2 + 8 sin(2*pi*t/40)  [bpm], t = uptime in secunde
+float source(uint32_t upMs) {
+  return 70.0f + 0.5f * N + 8.0f * sinf(2.0f * PI * (upMs / 1000.0f) / 40.0f);
+}
+
+bool reconecteaza() {
+  // testament: T_STARE = "offline", QoS 1, retinut; brokerul il publica doar la deconectare neasteptata
+  if (mqtt.connect(CLIENT_ID, MQTT_USER, MQTT_PASS, T_STARE, 1, true, "offline")) {
+    mqtt.publish(T_STARE, "online", true);          // stare retinuta (PubSubClient publica doar QoS 0)
+    Serial.printf("MQTT conectat ca %s; \"online\" retinut pe %s\n", CLIENT_ID, T_STARE);
+    return true;
+  }
+  Serial.printf("MQTT esuat, rc = %d (5 = neautorizat, -2 = broker inaccesibil)\n", mqtt.state());
+  return false;
+}
+
+void setup() {
+  Serial.begin(115200);
+  snprintf(T_PULS, sizeof T_PULS, "smmeh/pat%02u/puls", N);
+  snprintf(T_STARE, sizeof T_STARE, "smmeh/pat%02u/stare", N);
+  snprintf(CLIENT_ID, sizeof CLIENT_ID, "smmeh-pat%02u", N);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt.setKeepAlive(KA_S);
+  mqtt.setBufferSize(256);
+  bootMs = millis();
+  tNext = bootMs + TPUB_MS;
+  Serial.printf("SMMeH L07: N = %u, T_pub = %lu ms, K = %u s, topic %s\n", N, (unsigned long)TPUB_MS, KA_S, T_PULS);
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    if (millis() - tWifi >= 10000) { tWifi = millis(); WiFi.reconnect(); Serial.println("Wi-Fi: reconectare..."); }
+  } else if (!mqtt.connected() && millis() - tMqtt >= 5000) {   // reincercare la 5 s, fara blocarea buclei
+    tMqtt = millis();
+    reconecteaza();
+  }
+  mqtt.loop();                                       // trimite PINGREQ la nevoie, primeste mesaje
+  if ((int32_t)(millis() - tNext) >= 0) {           // bucla cu millis(), ca in L05
+    uint32_t up = tNext - bootMs;
+    tNext += TPUB_MS;
+    char pl[80];
+    snprintf(pl, sizeof pl, "{\"seq\":%lu,\"t\":%lu,\"hr\":%.1f,\"u\":\"bpm\"}",
+             (unsigned long)(++seq), (unsigned long)(up / 1000), source(up));
+    bool ok = mqtt.connected() && mqtt.publish(T_PULS, pl);   // QoS 0, nereținut
+    Serial.printf("t=%lu ms %s %s\n", (unsigned long)up, pl, ok ? "publicat" : "NEPUBLICAT (fara conexiune)");
+  }
+}
+</script>
+<script id="secrets" type="text/plain">
+// secrets.h - datele de acces primite la laborator.
+// NU se pune pe GitHub, NU apare in raport si NU se trimite pe e-mail.
+#pragma once
+#define WIFI_SSID "completati"
+#define WIFI_PASS "completati"
+#define MQTT_HOST "completati"     // adresa brokerului de laborator
+#define MQTT_PORT 1883
+#define MQTT_USER "completati"
+#define MQTT_PASS "completati"
+</script>
+<script>
+// ===== CONSTANTE =====
+const VERSION = '1.0';
+const CODE = 'SMMeH-L07';
+const N_MIN = 1, N_MAX = 42, N_EXEMPLU = 7;
+const DT = 10;            // pas de simulare [ms]
+const D_SB = 40;          // întârziere senzor <-> broker [ms]
+const D_BC = 20;          // întârziere broker -> abonați [ms]
+const RETRY_MS = 2000;    // retransmisie QoS 1 fără PUBACK [ms]
+const REBOOT_MS = 1000;   // pornire placă / reconectare Wi-Fi [ms]
+const WINDOW_MS = 12000;  // fereastra cronogramei
+
+const $ = id => document.getElementById(id);
+const pad2 = n => String(n).padStart(2, '0');
+function fmt(v, d = 2) {
+  if (v === null || v === undefined || !isFinite(v)) return '—';
+  return Number(v).toFixed(d).replace('.', ',');
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ===== VARIANTA =====
+function variant(n) {
+  const nn = pad2(n);
+  const vec = pad2((n % 42) + 1);
+  return {
+    n,
+    tpub: 1 + (n % 3),              // s
+    ka: 10 + 5 * (n % 4),           // s
+    hrmax: 76 + 0.5 * n,            // bpm
+    root: 'smmeh/pat' + nn,
+    cid: 'smmeh-pat' + nn,
+    vec: 'smmeh/pat' + vec + '/puls',
+    salon: 'smmeh/salon3/temp',
+    filters: ['smmeh/pat' + nn + '/#', 'smmeh/pat' + nn + '/puls', 'smmeh/+/puls', 'smmeh/#', 'smmeh/+']
+  };
+}
+function validN(v) {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < N_MIN || n > N_MAX) return 'Indicele N trebuie să fie un număr întreg între ' + N_MIN + ' și ' + N_MAX + '.';
+  return '';
+}
+function hrAt(n, upMs) {
+  return 70 + 0.5 * n + 8 * Math.sin(2 * Math.PI * (upMs / 1000) / 40);
+}
+function payloadPuls(seq, upMs, hr) {
+  return '{"seq":' + seq + ',"t":' + Math.round(upMs / 1000) + ',"hr":' + hr.toFixed(1) + ',"u":"bpm"}';
+}
+
+// ===== MQTT: dimensiune pachet și filtre =====
+function utf8len(s) { return new TextEncoder().encode(s).length; }
+function remLenBytes(rl) {
+  const out = [];
+  do { let b = rl % 128; rl = Math.floor(rl / 128); if (rl > 0) b |= 128; out.push(b); } while (rl > 0);
+  return out;
+}
+function pubParts(topic, payload, qos, retain, dup = false) {
+  const lt = utf8len(topic), lp = utf8len(payload);
+  const rl = 2 + lt + (qos > 0 ? 2 : 0) + lp;
+  const rlb = remLenBytes(rl);
+  const b1 = (3 << 4) | (dup ? 8 : 0) | (qos << 1) | (retain ? 1 : 0);
+  return { b1, rl, rlb, lt, lp, pid: qos > 0 ? 2 : 0, total: 1 + rlb.length + rl };
+}
+function topicMatch(filter, topic) {
+  // returnează [potrivire, motiv]
+  if (!filter) return [false, 'Filtrul este gol.'];
+  if (!topic) return [false, 'Topicul este gol.'];
+  if (/[+#]/.test(topic)) return [false, 'Un topic publicat nu poate conține + sau #.'];
+  const f = filter.split('/'), t = topic.split('/');
+  for (let i = 0; i < f.length; i++) {
+    if (f[i].includes('#') && (f[i] !== '#' || i !== f.length - 1)) return [false, 'Filtru invalid: # trebuie să stea singur, pe ultimul nivel.'];
+    if (f[i].includes('+') && f[i] !== '+') return [false, 'Filtru invalid: + trebuie să ocupe un nivel întreg.'];
+  }
+  if (topic.startsWith('$') && (f[0] === '+' || f[0] === '#')) return [false, 'Topicurile care încep cu $ nu sunt prinse de un filtru care începe cu + sau #.'];
+  for (let i = 0; i < f.length; i++) {
+    if (f[i] === '#') return [true, '# acoperă restul nivelurilor' + (i === t.length ? ' (inclusiv zero niveluri: nivelul părinte)' : '') + '.'];
+    if (i >= t.length) return [false, 'Topicul are mai puține niveluri decât filtrul.'];
+    if (f[i] === '+') continue;
+    if (f[i] !== t[i]) return [false, 'Nivelul ' + (i + 1) + ' diferă: „' + f[i] + '” ≠ „' + t[i] + '” (literele mari și mici contează).'];
+  }
+  if (t.length > f.length) return [false, 'Topicul are mai multe niveluri; + acoperă exact un nivel.'];
+  return [true, 'Toate nivelurile se potrivesc.'];
+}
+
+// ===== STAREA MODELULUI =====
+let cfg, S, playing = false, lastFrame = 0, acc = 0;
+
+function newState(c) {
+  return {
+    t: 0,
+    sen: { on: true, wifi: true, conn: 'off', boot: 0, seq: 0, nextPub: 0, lastTx: -1e9, pid: 0,
+           pending: [], reconnectAt: 0, pingAt: null, sent: 0 },
+    brk: { senConn: false, senLastRx: null, will: null, retained: {}, alQueue: [] },
+    mon: { conn: true, filter: c.filters[0], last: null, lastRx: null, stare: null, recv: 0, dup: 0,
+           seen: new Set(), rows: [], retainedLast: false },
+    al: { conn: true, count: 0, seen: new Set(), last: null },
+    ackLossNext: false,
+    vec: { seq: 0 }, sal: { k: 0 },
+    flight: [], pk: [], log: [], hist: [], allRows: []
+  };
+}
+function logS(text) {
+  S.log.push({ t: S.t, text });
+  if (S.log.length > 400) S.log.shift();
+}
+function mark(lane, kind, lost = false) {
+  S.pk.push({ t: S.t, lane, kind, lost });
+  if (S.pk.length > 2000) S.pk.shift();
+}
+
+// ---- trimitere
+function senSend(p) {
+  S.sen.lastTx = S.t;
+  const letter = { CONNECT: 'C', PUBLISH: 'P', PINGREQ: 'I', DISCONNECT: 'D' }[p.type];
+  if (!S.sen.wifi || !S.sen.on) { mark(0, letter, true); return; }
+  mark(0, letter);
+  S.flight.push(Object.assign({ at: S.t + D_SB, to: 'broker', from: 'sen' }, p));
+}
+function brkToSen(p) {
+  const letter = { CONNACK: 'C', PUBACK: 'A', PINGRESP: 'I' }[p.type];
+  if (p.lost || !S.sen.wifi || !S.sen.on) { mark(0, letter, true); return; }
+  mark(0, letter);
+  S.flight.push(Object.assign({ at: S.t + D_SB, to: 'sen', from: 'broker' }, p));
+}
+function brkToClient(who, msg, retainFlag) {
+  const lane = who === 'mon' ? 1 : 2;
+  mark(lane, msg.will ? 'W' : 'P');
+  S.flight.push({ at: S.t + D_BC, to: who, type: 'PUBLISH', msg: Object.assign({}, msg, { retain: retainFlag, dup: false }) });
+}
+
+// ---- brokerul distribuie
+function distribute(msg) {
+  if (S.mon.conn && topicMatch(S.mon.filter, msg.topic)[0]) brkToClient('mon', Object.assign({}, msg, { qos: 0 }), false);
+  if (topicMatch('smmeh/+/puls', msg.topic)[0]) {
+    const m = Object.assign({}, msg, { qos: Math.min(msg.qos, 1) });
+    if (S.al.conn) brkToClient('al', m, false);
+    else if (m.qos >= 1) { S.brk.alQueue.push(m); logS('Broker: alarma lipsește; mesajul QoS 1 seq ' + (m.seq || '—') + ' intră în coada sesiunii persistente.'); }
+  }
+}
+function brokerStore(msg) {
+  if (!msg.retain) return;
+  if (msg.payload === '') { delete S.brk.retained[msg.topic]; logS('Broker: mesajul reținut de pe ' + msg.topic + ' a fost șters (payload gol).'); }
+  else S.brk.retained[msg.topic] = Object.assign({}, msg);
+}
+function deliverRetained(who, filter) {
+  for (const tp of Object.keys(S.brk.retained).sort()) {
+    if (topicMatch(filter, tp)[0]) {
+      const m = Object.assign({}, S.brk.retained[tp], { qos: 0 });
+      brkToClient(who, m, true);
+    }
+  }
+}
+
+// ---- recepție
+function onBroker(p) {
+  if (p.from === 'sen') S.brk.senLastRx = S.t;
+  if (p.type === 'CONNECT') {
+    if (S.brk.senConn) logS('Broker: CONNECT cu ClientId ' + cfg.cid + ' deja conectat → vechea conexiune este închisă (preluare), fără testament.');
+    S.brk.senConn = true; S.brk.will = p.will;
+    logS('Broker: CONNECT de la ' + cfg.cid + ' (keep alive ' + cfg.ka + ' s, testament „offline” reținut).');
+    brkToSen({ type: 'CONNACK' });
+  } else if (p.type === 'PUBLISH') {
+    const m = p.msg;
+    brokerStore(m);
+    distribute(m);
+    if (m.qos === 1) {
+      const lost = S.ackLossNext; S.ackLossNext = false;
+      if (lost) logS('PUBACK pentru id ' + m.pid + ' pierdut pe drum (comanda „Pierde următorul PUBACK”).');
+      brkToSen({ type: 'PUBACK', pid: m.pid, lost });
+    }
+  } else if (p.type === 'PINGREQ') {
+    brkToSen({ type: 'PINGRESP' });
+  } else if (p.type === 'DISCONNECT') {
+    S.brk.senConn = false; S.brk.will = null;
+    logS('Broker: DISCONNECT de la ' + cfg.cid + ' → testamentul este șters și NU se publică.');
+  }
+}
+function onSensor(p) {
+  const s = S.sen;
+  if (p.type === 'CONNACK') {
+    s.conn = 'on';
+    logS('Senzor: CONNACK primit → publică „online” reținut pe ' + cfg.root + '/stare.');
+    publishSen(cfg.root + '/stare', 'online', 0, true, null);
+  } else if (p.type === 'PUBACK') {
+    const i = s.pending.findIndex(x => x.msg.pid === p.pid);
+    if (i >= 0) s.pending.splice(i, 1);
+  } else if (p.type === 'PINGRESP') {
+    s.pingAt = null;
+  }
+}
+function onClient(who, m) {
+  if (who === 'mon') {
+    const M = S.mon;
+    const own = m.topic === cfg.root + '/puls';
+    let isDup = false;
+    if (m.topic === cfg.root + '/stare') {
+      M.stare = m.payload;
+    } else if (own) {
+      const d = safeJSON(m.payload);
+      if (d && M.seen.has(d.seq) && !m.retain) { isDup = true; M.dup++; logS('Monitor: duplicat seq ' + d.seq + ' (ignorat la afișare).'); }
+      else if (d) { if (!m.retain) M.seen.add(d.seq); M.last = { hr: d.hr, seq: d.seq, tu: d.t }; M.lastRx = S.t; M.retainedLast = !!m.retain; }
+    }
+    M.recv++;
+    const sz = pubParts(m.topic, m.payload, m.qos, m.retain).total;
+    const row = { t: S.t, topic: m.topic, qos: m.qos, retain: m.retain ? 1 : 0, dup: isDup ? 'da (seq)' : '', seq: m.seq || '', payload: m.payload, bytes: sz, will: !!m.will };
+    M.rows.push(row); S.allRows.push(row);
+    if (M.rows.length > 12) M.rows.shift();
+  } else {
+    const A = S.al;
+    const d = safeJSON(m.payload);
+    if (!d) return;
+    const key = m.topic + '#' + d.seq;
+    if (A.seen.has(key)) { logS('Alarmă: duplicat ' + key + ' ignorat.'); return; }
+    A.seen.add(key);
+    A.last = { topic: m.topic, hr: d.hr };
+    if (d.hr > cfg.hrmax) { A.count++; logS('ALARMĂ: ' + m.topic + ' HR = ' + fmt(d.hr, 1) + ' bpm > ' + fmt(cfg.hrmax, 1) + ' bpm.'); }
+  }
+}
+function safeJSON(s) { try { return JSON.parse(s); } catch (e) { return null; } }
+
+// ---- acțiuni senzor
+function publishSen(topic, payload, qos, retain, seq) {
+  const s = S.sen;
+  const msg = { topic, payload, qos, retain, seq, pid: 0, dup: false };
+  if (qos > 0) { s.pid = (s.pid % 65535) + 1; msg.pid = s.pid; s.pending.push({ msg, sentAt: S.t }); }
+  senSend({ type: 'PUBLISH', msg });
+}
+function sensorTick() {
+  const s = S.sen;
+  if (!s.on) return;
+  if (s.conn === 'off' && s.wifi && S.t >= s.reconnectAt) {
+    s.conn = 'connecting';
+    logS('Senzor: CONNECT (ClientId ' + cfg.cid + ', keep alive ' + cfg.ka + ' s).');
+    senSend({ type: 'CONNECT', will: { topic: cfg.root + '/stare', payload: 'offline', qos: 1, retain: true } });
+  }
+  if (S.t >= s.nextPub) {
+    const up = s.nextPub - s.boot;
+    s.seq++;
+    s.nextPub += cfg.tpub * 1000;
+    if (s.conn === 'on') {
+      const hr = hrAt(cfg.n, up);
+      const qos = Number($('qos').value), ret = $('retainPuls').checked;
+      publishSen(cfg.root + '/puls', payloadPuls(s.seq, up, hr), qos, ret, s.seq);
+      s.sent++;
+    } else logS('Senzor: eșantionul seq ' + s.seq + ' NU a fost publicat (fără conexiune MQTT).');
+  }
+  if (s.conn !== 'on') return;
+  for (const p of s.pending) {
+    if (S.t - p.sentAt >= RETRY_MS) {
+      p.sentAt = S.t;
+      logS('Senzor: fără PUBACK pentru id ' + p.msg.pid + ' → retransmite PUBLISH cu DUP = 1.');
+      senSend({ type: 'PUBLISH', msg: Object.assign({}, p.msg, { dup: true }) });
+    }
+  }
+  if (S.t - s.lastTx >= cfg.ka * 1000) {
+    logS('Senzor: ' + cfg.ka + ' s fără pachete → PINGREQ.');
+    s.pingAt = S.t;
+    senSend({ type: 'PINGREQ' });
+  }
+}
+function brokerTick() {
+  const b = S.brk;
+  if (b.senConn && S.t - b.senLastRx > 1.5 * cfg.ka * 1000) {
+    b.senConn = false;
+    logS('Broker: niciun pachet de la ' + cfg.cid + ' în 1,5·K = ' + fmt(1.5 * cfg.ka, 1) + ' s → închide conexiunea și publică testamentul.');
+    if (b.will) {
+      const w = Object.assign({ will: true, seq: '', pid: 0, dup: false }, b.will);
+      brokerStore(w);
+      distribute(w);
+      b.will = null;
+    }
+  }
+}
+function othersTick() {
+  // pacient vecin: la 3 s, decalat cu 1,5 s; termometru: la 5 s, decalat cu 2,5 s
+  if (S.t >= 1500 && (S.t - 1500) % 3000 === 0) {
+    S.vec.seq++;
+    const hr = 72 + 3 * Math.sin(2 * Math.PI * (S.t / 1000) / 30);
+    const m = { topic: cfg.vec, payload: '{"seq":' + S.vec.seq + ',"t":' + Math.round(S.t / 1000) + ',"hr":' + hr.toFixed(1) + ',"u":"bpm"}', qos: 0, retain: false, seq: S.vec.seq, pid: 0 };
+    S.flight.push({ at: S.t + D_SB, to: 'broker', from: 'other', type: 'PUBLISH', msg: m });
+  }
+  if (S.t >= 2500 && (S.t - 2500) % 5000 === 0) {
+    S.sal.k++;
+    const m = { topic: cfg.salon, payload: '{"t":' + Math.round(S.t / 1000) + ',"temp":22.4,"u":"C"}', qos: 0, retain: false, seq: '', pid: 0 };
+    S.flight.push({ at: S.t + D_SB, to: 'broker', from: 'other', type: 'PUBLISH', msg: m });
+  }
+}
+function step() {
+  S.t += DT;
+  const due = S.flight.filter(p => p.at <= S.t);
+  S.flight = S.flight.filter(p => p.at > S.t);
+  for (const p of due) {
+    if (p.to === 'broker') onBroker(p);
+    else if (p.to === 'sen') { if (S.sen.on && S.sen.wifi) onSensor(p); }
+    else if (p.to === 'mon') { if (S.mon.conn) onClient('mon', p.msg); }
+    else if (p.to === 'al') { if (S.al.conn) onClient('al', p.msg); }
+  }
+  sensorTick();
+  othersTick();
+  brokerTick();
+  if (S.t % 100 === 0) {
+    S.hist.push({ t: S.t, hr: S.sen.on ? hrAt(cfg.n, S.t - S.sen.boot) : null, rx: S.mon.last ? S.mon.last.hr : null, age: S.mon.lastRx !== null ? (S.t - S.mon.lastRx) / 1000 : null });
+    if (S.hist.length > 3000) S.hist.shift();
+  }
+}
+function runTo(target) { while (S.t < target) step(); }
+function startSensorAt0() {
+  S.sen.boot = 0; S.sen.reconnectAt = 0; S.sen.nextPub = cfg.tpub * 1000;
+  sensorTick();
+}
+
+// ---- comenzi
+function cmdWifi() {
+  const s = S.sen;
+  s.wifi = !s.wifi;
+  if (!s.wifi) {
+    if (s.conn !== 'stopped') s.conn = 'off';
+    s.pending = []; s.pingAt = null;
+    S.flight = S.flight.filter(p => p.from !== 'sen' && p.to !== 'sen');
+    logS('Senzor: Wi-Fi pierdut. Pachetele spre și dinspre senzor se pierd; brokerul nu este anunțat.');
+  } else {
+    s.reconnectAt = S.t + REBOOT_MS;
+    logS('Senzor: Wi-Fi restabilit; reconectare MQTT peste ' + fmt(REBOOT_MS / 1000, 1) + ' s.');
+  }
+}
+function cmdPower() {
+  const s = S.sen;
+  if (s.on) {
+    s.on = false; s.conn = 'off'; s.pending = [];
+    S.flight = S.flight.filter(p => p.from !== 'sen' && p.to !== 'sen');
+    logS('Senzor: bateria a cedat (fără DISCONNECT).');
+  } else cmdReboot();
+}
+function cmdReboot() {
+  const s = S.sen;
+  s.on = true; s.wifi = true; s.conn = 'off'; s.boot = S.t; s.seq = 0; s.pending = []; s.pingAt = null;
+  s.reconnectAt = S.t + REBOOT_MS; s.lastTx = S.t; s.nextPub = S.t + cfg.tpub * 1000;
+  S.mon.seen = new Set();
+  S.flight = S.flight.filter(p => p.from !== 'sen' && p.to !== 'sen');
+  logS('Senzor: repornire; uptime și seq încep de la 0; CONNECT peste ' + fmt(REBOOT_MS / 1000, 1) + ' s.');
+}
+function cmdDisc() {
+  const s = S.sen;
+  if (s.conn !== 'on') { logS('Senzor: nu este conectat; DISCONNECT nu are sens.'); return; }
+  if ($('offlineFirst').checked) publishSen(cfg.root + '/stare', 'offline', 0, true, null);
+  senSend({ type: 'DISCONNECT' });
+  s.conn = 'stopped';
+  logS('Senzor: oprire normală' + ($('offlineFirst').checked ? ' (a publicat „offline” reținut, apoi DISCONNECT).' : ' (doar DISCONNECT, fără „offline”).'));
+}
+function cmdMon() {
+  const M = S.mon;
+  M.conn = !M.conn;
+  if (M.conn) {
+    logS('Monitor: reconectat (sesiune curată), SUBSCRIBE ' + M.filter + ' → primește mesajele reținute potrivite.');
+    deliverRetained('mon', M.filter);
+  } else {
+    M.last = null; M.lastRx = null; M.stare = null; M.seen = new Set(); M.retainedLast = false;
+    logS('Monitor: deconectat (aplicația pornește de la zero). Brokerul nu păstrează nimic pentru el (sesiune curată).');
+  }
+}
+function cmdAlarm() {
+  const A = S.al;
+  A.conn = !A.conn;
+  if (A.conn) {
+    const q = S.brk.alQueue.splice(0);
+    logS('Alarmă: reconectată (sesiune persistentă) → ' + q.length + ' mesaje QoS 1 din coadă.');
+    for (const m of q) brkToClient('al', m, false);
+  } else logS('Alarmă: deconectată. Brokerul păstrează abonarea și mesajele QoS 1.');
+}
+function cmdFilter() {
+  S.mon.filter = $('filter').value;
+  logS('Monitor: abonare nouă la ' + S.mon.filter + ' → primește mesajele reținute potrivite.');
+  if (S.mon.conn) deliverRetained('mon', S.mon.filter);
+}
+
+// ===== INTERFAȚĂ =====
+function readN() { return Number($('index').value); }
+function applyVariant() {
+  const err = validN($('index').value);
+  $('validation').textContent = err;
+  if (err) return;
+  cfg = variant(readN());
+  $('filter').innerHTML = cfg.filters.map(f => '<option>' + esc(f) + '</option>').join('');
+  reset();
+  try { restoreSheet(); } catch (e) {}
+}
+function reset() {
+  S = newState(cfg);
+  S.mon.filter = $('filter').value || cfg.filters[0];
+  playing = false; $('play').textContent = 'Pornește';
+  for (const id of ['wifi', 'power', 'mon', 'alarm']) $(id).setAttribute('aria-pressed', 'false');
+  startSensorAt0();
+  fillStatic();
+  render();
+}
+function fillStatic() {
+  const c = cfg;
+  $('cid').value = c.cid;
+  $('varcode').value = CODE + '-N' + pad2(c.n) + '-v' + VERSION;
+  $('cidText').textContent = c.cid; $('cidNode').textContent = c.cid;
+  $('othersText').textContent = c.vec + ' · ' + c.salon;
+  $('stale').value = fmt(3 * c.tpub, 0);
+  $('hrmax').value = fmt(c.hrmax, 1);
+  const hr1 = hrAt(c.n, c.tpub * 1000), pl = payloadPuls(1, c.tpub * 1000, hr1);
+  const p0 = pubParts(c.root + '/puls', pl, 0, false), p1 = pubParts(c.root + '/puls', pl, 1, false);
+  const rows = [
+    ['Topic puls / stare', c.root + '/puls · ' + c.root + '/stare'],
+    ['ClientId', c.cid],
+    ['Perioada de publicare T_pub = 1 + (N mod 3)', fmt(c.tpub, 0) + ' s'],
+    ['Keep alive K = 10 + 5·(N mod 4)', fmt(c.ka, 0) + ' s → limita brokerului 1,5·K = ' + fmt(1.5 * c.ka, 1) + ' s'],
+    ['Prag date învechite la monitor 3·T_pub', fmt(3 * c.tpub, 0) + ' s'],
+    ['Prag alarmă puls 76 + 0,5·N', fmt(c.hrmax, 1) + ' bpm'],
+    ['HR la primul PUBLISH (t_u = T_pub)', fmt(hr1, 3) + ' bpm → în JSON ' + hr1.toFixed(1)],
+    ['Primul payload', pl],
+    ['PUBLISH QoS 0 / QoS 1', p0.total + ' / ' + p1.total + ' octeți (+ PUBACK 4 octeți la QoS 1)'],
+    ['Mesaje de puls pe oră', fmt(3600 / c.tpub, 0)]
+  ];
+  $('varTable').innerHTML = rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td class="mono">' + esc(r[1]) + '</td></tr>').join('');
+  $('thresholds').textContent = 'Varianta N = ' + c.n + ': T_pub = ' + c.tpub + ' s, K = ' + c.ka + ' s, 1,5·K = ' + fmt(1.5 * c.ka, 1) + ' s, prag vechime 3·T_pub = ' + 3 * c.tpub + ' s, prag alarmă ' + fmt(c.hrmax, 1) + ' bpm. Întârzieri modelate: 40 ms senzor–broker, 20 ms broker–abonați.';
+  $('sheetid').textContent = 'Fișa variantei ' + CODE + '-N' + pad2(c.n) + '-v' + VERSION + ' · topic ' + c.root + '/… · ClientId ' + c.cid;
+  $('subCmd').textContent = "mosquitto_sub -h <broker> -u <utilizator> -P <parola> -t '" + c.root + "/#' -v";
+  $('exampleNote').innerHTML = exampleText();
+  buildSheet();
+}
+function monStatus() {
+  const M = S.mon;
+  if (!M.conn) return ['Monitor deconectat', 'bad'];
+  if (M.stare === 'offline') return ['Senzor OFFLINE (stare)', 'bad'];
+  if (!M.last) return ['Nicio valoare', ''];
+  const age = (S.t - M.lastRx) / 1000;
+  if (M.retainedLast && age <= 3 * cfg.tpub) return ['Valoare reținută – vechime reală necunoscută', 'old'];
+  if (age > 3 * cfg.tpub) return ['Date învechite', 'old'];
+  return ['Date valide', 'good'];
+}
+function render() {
+  const s = S.sen, M = S.mon, b = S.brk;
+  $('clock').textContent = fmt(S.t / 1000, 2) + ' s';
+  const st = monStatus();
+  $('status').textContent = st[0]; $('status').className = 'badge ' + st[1];
+  $('age').textContent = M.lastRx !== null && M.conn ? fmt((S.t - M.lastRx) / 1000, 2) + ' s' : '—';
+  const rs = b.retained[cfg.root + '/stare'];
+  $('retState').textContent = rs ? rs.payload : '—';
+  $('nSent').textContent = s.sent;
+  $('nRecv').textContent = M.recv + ' / ' + M.dup;
+  $('lastRx').textContent = b.senLastRx !== null ? fmt(b.senLastRx / 1000, 2) + ' s' : '—';
+  $('nAlarm').textContent = S.al.count;
+  $('txDisplay').textContent = s.on ? fmt(hrAt(cfg.n, S.t - s.boot), 1) + ' bpm' : 'Oprit';
+  $('senState').textContent = !s.on ? 'Fără alimentare' : !s.wifi ? 'Fără Wi-Fi' : ({ off: 'Așteaptă reconectarea', connecting: 'CONNECT trimis', on: 'Conectat · seq ' + s.seq, stopped: 'Oprit normal (DISCONNECT)' }[s.conn]);
+  $('brkDisplay').textContent = Object.keys(b.retained).length + ' reținute';
+  $('brkState').textContent = b.senConn ? cfg.cid + ' conectat' : cfg.cid + ' deconectat';
+  $('monFilterText').textContent = M.filter;
+  $('rxDisplay').textContent = M.last ? fmt(M.last.hr, 1) + ' bpm' : '—';
+  $('monState').textContent = st[0];
+  $('alDisplay').textContent = S.al.count + ' alarme';
+  $('alState').textContent = S.al.conn ? 'Conectat · coadă ' + b.alQueue.length : 'Deconectat · coadă ' + b.alQueue.length;
+  $('wireIn').className = 'wire' + (s.wifi && s.on ? '' : ' cut');
+  $('wireOut').className = 'wire out' + (M.conn ? '' : ' cut');
+  const last = M.rows[M.rows.length - 1];
+  $('payload').textContent = last ? 'topic: ' + last.topic + '\nQoS ' + last.qos + ' · retain ' + last.retain + (last.will ? ' · TESTAMENT' : '') + '\n' + last.payload : 'Niciun mesaj.';
+  $('rows').innerHTML = M.rows.slice().reverse().map(r => '<tr><td>' + fmt(r.t / 1000, 2) + '</td><td class="mono">' + esc(r.topic) + '</td><td>' + r.qos + '</td><td>' + r.retain + '</td><td>' + esc(r.dup) + '</td><td>' + esc(r.seq) + '</td><td class="mono">' + esc(r.payload) + '</td><td>' + r.bytes + '</td></tr>').join('');
+  $('log').innerHTML = S.log.slice(-80).reverse().map(e => '<div>' + fmt(e.t / 1000, 2) + ' s · ' + esc(e.text) + '</div>').join('');
+  $('wifi').setAttribute('aria-pressed', String(!s.wifi)); $('wifi').textContent = s.wifi ? 'Senzor: pierde Wi-Fi' : 'Senzor: restabilește Wi-Fi';
+  $('power').setAttribute('aria-pressed', String(!s.on)); $('power').textContent = s.on ? 'Senzor: bateria cedează' : 'Senzor: pornește';
+  $('mon').setAttribute('aria-pressed', String(!M.conn)); $('mon').textContent = M.conn ? 'Monitor: deconectează' : 'Monitor: reconectează';
+  $('alarm').setAttribute('aria-pressed', String(!S.al.conn)); $('alarm').textContent = S.al.conn ? 'Alarmă: deconectează' : 'Alarmă: reconectează';
+  drawPackets(); drawLine('values', false); drawLine('ages', true);
+  animateDots();
+}
+let pkSeen = 0;
+function animateDots() {
+  if (pkSeen > S.pk.length) pkSeen = 0;
+  const fresh = S.pk.slice(pkSeen).filter(p => !p.lost && (p.kind === 'P' || p.kind === 'W') && p.lane < 2).slice(-3);
+  pkSeen = S.pk.length;
+  if (!playing) return;
+  for (const p of fresh) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (p.kind === 'W' ? ' w' : '');
+    const wire = $(p.lane === 0 ? 'wireIn' : 'wireOut');
+    wire.appendChild(d);
+    setTimeout(() => d.remove(), 700);
+  }
+}
+
+// ===== GRAFICE =====
+function setupCanvas(cv) {
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d));
+  const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
+  return [c, r.width, r.height];
+}
+function drawPackets() {
+  const [c, w, h] = setupCanvas($('packets'));
+  c.clearRect(0, 0, w, h);
+  const m = { l: 120, r: 10, t: 10, b: 22 };
+  const t1 = S.t, t0 = Math.max(0, t1 - WINDOW_MS);
+  const x = t => m.l + (t - t0) / WINDOW_MS * (w - m.l - m.r);
+  const lanes = ['senzor ↔ broker', 'broker → monitor', 'broker → alarmă'];
+  const lh = (h - m.t - m.b) / 3;
+  c.font = '12px system-ui'; c.textBaseline = 'middle';
+  lanes.forEach((ln, i) => {
+    const y = m.t + lh * i + lh / 2;
+    c.fillStyle = '#333'; c.fillText(ln, 6, y);
+    c.strokeStyle = '#ddd'; c.beginPath(); c.moveTo(m.l, y); c.lineTo(w - m.r, y); c.stroke();
+  });
+  const col = { P: '#0e7490', A: '#7c3aed', I: '#996d00', C: '#26713c', W: '#ad2424', D: '#555' };
+  for (const p of S.pk) {
+    if (p.t < t0) continue;
+    const y = m.t + lh * p.lane + lh / 2, X = x(p.t);
+    c.fillStyle = p.lost ? '#ad2424' : col[p.kind] || '#000';
+    c.fillRect(X - 1.5, y - 9, 3, 18);
+    c.font = 'bold 10px system-ui'; c.fillText(p.lost ? '×' : p.kind, X + 3, y - 10);
+  }
+  c.fillStyle = '#333'; c.font = '11px system-ui'; c.textBaseline = 'alphabetic';
+  for (let s = Math.ceil(t0 / 2000) * 2000; s <= t1; s += 2000) c.fillText(fmt(s / 1000, 0) + ' s', x(s) - 8, h - 6);
+}
+function drawLine(id, isAge) {
+  const [c, w, h] = setupCanvas($(id));
+  c.clearRect(0, 0, w, h);
+  const m = { l: 48, r: 12, t: 22, b: 26 };
+  const H = S.hist.filter(p => p.t >= S.t - 60000);
+  const t0 = Math.max(0, S.t - 60000), t1 = Math.max(S.t, t0 + 1000);
+  let ymin, ymax;
+  if (isAge) { ymin = 0; ymax = Math.max(1.5 * cfg.ka * 1.1, ...H.map(p => p.age || 0)); }
+  else { ymin = 60; ymax = 70 + 0.5 * cfg.n + 12; }
+  const X = t => m.l + (t - t0) / (t1 - t0) * (w - m.l - m.r);
+  const Y = v => h - m.b - (v - ymin) / (ymax - ymin) * (h - m.t - m.b);
+  c.strokeStyle = '#999'; c.lineWidth = 1; c.beginPath(); c.moveTo(m.l, m.t); c.lineTo(m.l, h - m.b); c.lineTo(w - m.r, h - m.b); c.stroke();
+  c.fillStyle = '#333'; c.font = '11px system-ui';
+  c.fillText(isAge ? 'Vechime (s)' : 'Puls HR (bpm)', m.l, 13);
+  for (let k = 0; k <= 4; k++) { const v = ymin + (ymax - ymin) * k / 4; c.fillText(fmt(v, 0), 6, Y(v) + 4); }
+  c.fillText('t (s): ' + fmt(t0 / 1000, 0) + ' … ' + fmt(t1 / 1000, 0), w - 140, h - 6);
+  function line(key, color, dash) {
+    c.strokeStyle = color; c.lineWidth = 2; c.setLineDash(dash || []); c.beginPath();
+    let pen = false;
+    for (const p of H) { const v = p[key]; if (v === null) { pen = false; continue; } const px = X(p.t), py = Y(v); if (!pen) { c.moveTo(px, py); pen = true; } else c.lineTo(px, py); }
+    c.stroke(); c.setLineDash([]);
+  }
+  function hline(v, color, label) {
+    c.strokeStyle = color; c.setLineDash([5, 4]); c.beginPath(); c.moveTo(m.l, Y(v)); c.lineTo(w - m.r, Y(v)); c.stroke(); c.setLineDash([]);
+    c.fillStyle = color; c.fillText(label, w - m.r - 150, Y(v) - 4);
+  }
+  if (isAge) { line('age', '#be185d'); hline(3 * cfg.tpub, '#996d00', '3·T_pub = ' + 3 * cfg.tpub + ' s'); hline(1.5 * cfg.ka, '#ad2424', '1,5·K = ' + fmt(1.5 * cfg.ka, 1) + ' s'); }
+  else { line('hr', '#0e7490'); line('rx', '#be185d'); hline(cfg.hrmax, '#ad2424', 'prag alarmă ' + fmt(cfg.hrmax, 1)); }
+}
+
+// ===== CALCULATOR ȘI FILTRE =====
+function hex2(b) { return b.toString(16).toUpperCase().padStart(2, '0'); }
+function calcPub() {
+  const topic = $('cTopic').value, pl = $('cPayload').value, q = Number($('cQos').value), r = $('cRetain').checked;
+  if (!topic) { $('cMsg').textContent = 'Completați topicul.'; return; }
+  if (/[+#]/.test(topic)) { $('cMsg').textContent = 'Un topic de publicare nu poate conține + sau #.'; return; }
+  const p = pubParts(topic, pl, q, r);
+  $('cBytes').innerHTML = '<div class="byte f">' + hex2(p.b1) + '<small>octet 1</small></div>' +
+    p.rlb.map((b, i) => '<div class="byte">' + hex2(b) + '<small>lungime ' + (i + 1) + '</small></div>').join('') +
+    '<div class="byte h">' + hex2(p.lt >> 8) + ' ' + hex2(p.lt & 255) + '<small>lung. topic</small></div>';
+  const rows = [
+    ['Octetul 1', '1', 'tip 3 (PUBLISH) · DUP 0 · QoS ' + q + ' · RETAIN ' + (r ? 1 : 0) + ' → 0x' + hex2(p.b1)],
+    ['Lungimea rămasă', String(p.rlb.length), 'valoarea ' + p.rl + (p.rl > 127 ? ' > 127 → mai mulți octeți' : ' ≤ 127 → un octet')],
+    ['Lungimea topicului', '2', 'valoarea ' + p.lt],
+    ['Topic', String(p.lt), 'UTF-8'],
+    ['Identificator pachet', String(p.pid), q > 0 ? 'există la QoS 1 și 2' : 'lipsește la QoS 0'],
+    ['Payload', String(p.lp), 'octeți UTF-8'],
+    ['TOTAL PUBLISH', String(p.total), q === 1 ? '+ PUBACK 4 octeți în sens invers' : q === 2 ? '+ PUBREC, PUBREL, PUBCOMP (câte 4 octeți)' : 'fără confirmare']
+  ];
+  $('cTable').innerHTML = rows.map(x => '<tr><td>' + esc(x[0]) + '</td><td><b>' + esc(x[1]) + '</b></td><td>' + esc(x[2]) + '</td></tr>').join('');
+  $('cMsg').textContent = 'Calcul fără antetele TCP/IP și Wi-Fi.';
+}
+function testFilter() {
+  const [ok, why] = topicMatch($('fFilter').value.trim(), $('fTopic').value.trim());
+  $('fMsg').textContent = (ok ? '✓ Se potrivește. ' : '✗ Nu se potrivește. ') + why;
+  $('fMsg').className = 'badge ' + (ok ? 'good' : 'bad');
+}
+
+// ===== EXEMPLUL N = 7 (calculat de același model) =====
+function simulateScenario(n) {
+  const saveCfg = cfg, saveS = S;
+  cfg = variant(n); S = newState(cfg); S.mon.filter = cfg.filters[0];
+  const qosSel = $('qos').value, retSel = $('retainPuls').checked;
+  $('qos').value = '0'; $('retainPuls').checked = false;
+  startSensorAt0();
+  runTo(11000); cmdWifi();
+  const lastRxBroker = S.brk.senLastRx, monLast = S.mon.lastRx;
+  let tStale = null, tWillBrk = null, tWillMon = null;
+  while (S.t < 120000 && tWillMon === null) {
+    step();
+    if (tStale === null && S.mon.lastRx !== null && S.t - S.mon.lastRx > 3 * cfg.tpub * 1000) tStale = S.t;
+    if (tWillBrk === null && !S.brk.senConn) tWillBrk = S.t;
+    if (tWillMon === null && S.mon.stare === 'offline') tWillMon = S.t;
+  }
+  const out = { lastRxBroker, monLast, tStale, tWillBrk, tWillMon, sent: S.sen.sent };
+  $('qos').value = qosSel; $('retainPuls').checked = retSel;
+  cfg = saveCfg; S = saveS;
+  return out;
+}
+function exampleText() {
+  const n = N_EXEMPLU, v = variant(n), hr1 = hrAt(n, v.tpub * 1000), pl = payloadPuls(1, v.tpub * 1000, hr1);
+  const p0 = pubParts(v.root + '/puls', pl, 0, false), p1 = pubParts(v.root + '/puls', pl, 1, false);
+  const r = simulateScenario(n);
+  return '<b>Exemplu N = 7:</b> T<sub>pub</sub> = ' + v.tpub + ' s, K = ' + v.ka + ' s, 1,5·K = ' + fmt(1.5 * v.ka, 1) + ' s. ' +
+    'CONNECT la 0 s, CONNACK la 0,08 s, „online” reținut la monitor la 0,14 s. Primul PUBLISH la uptime ' + v.tpub + ' s: HR = ' + fmt(hr1, 3) + ' bpm, payload <span class="mono">' + esc(pl) + '</span> (' + p0.lp + ' octeți), PUBLISH de ' + p0.total + ' octeți la QoS 0 (' + p1.total + ' la QoS 1), ajunge la monitor la ' + fmt(v.tpub + 0.06, 2) + ' s. ' +
+    'Wi-Fi pierdut la 11 s: ultimul pachet ajuns la broker la ' + fmt(r.lastRxBroker / 1000, 2) + ' s, monitorul îl primise la ' + fmt(r.monLast / 1000, 2) + ' s; datele devin învechite la ' + fmt(r.tStale / 1000, 2) + ' s (vechime > ' + 3 * v.tpub + ' s); brokerul publică testamentul la ' + fmt(r.tWillBrk / 1000, 2) + ' s, iar monitorul vede „offline” la ' + fmt(r.tWillMon / 1000, 2) + ' s. ' + fmt(3600 / v.tpub, 0) + ' mesaje de puls pe oră.';
+}
+
+// ===== FIȘA =====
+const SHEET = [
+  ['tpk', 'T_pub · K · 1,5·K', '(1)'],
+  ['hr1', 'HR la primul PUBLISH (t_u = T_pub)', '(2)'],
+  ['pl1', 'Primul payload JSON', '—'],
+  ['size', 'Octeți PUBLISH la QoS 0 / QoS 1', '(3)'],
+  ['mh', 'Mesaje de puls pe oră', '(4)'],
+  ['filt', 'Ce primește smmeh/+ ? Dar smmeh/# ?', 'filtre'],
+  ['ret', 'Monitor reconectat: ce primește imediat (cu / fără RETAIN la puls)', '—'],
+  ['lwt', 'Wi-Fi pierdut la 11 s: ultim pachet la broker / date învechite / „offline” la monitor', '(5), (6)'],
+  ['disc', 'Stare reținută după DISCONNECT fără „offline”', '—'],
+  ['dup', 'QoS 1, PUBACK pierdut: seq duplicat, moment', '—']
+];
+function sheetKey() { return CODE + '-' + VERSION + '-N' + pad2(cfg.n); }
+function buildSheet() {
+  $('sheetRows').innerHTML = SHEET.map(r => '<tr><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td>' +
+    ['c', 's', 'p'].map(k => '<td><input class="sheetin" data-k="' + r[0] + '-' + k + '" aria-label="' + esc(r[1]) + ' ' + k + '"></td>').join('') + '</tr>').join('');
+  document.querySelectorAll('.sheetin').forEach(i => i.addEventListener('input', saveSheet));
+}
+function sheetData() {
+  const d = {}; document.querySelectorAll('.sheetin').forEach(i => { d[i.dataset.k] = i.value; }); return d;
+}
+function saveSheet() {
+  try { localStorage.setItem(sheetKey(), JSON.stringify(sheetData())); $('sheetMsg').textContent = 'Salvat local în acest browser.'; }
+  catch (e) { $('sheetMsg').textContent = 'Salvarea locală nu merge în acest browser: folosiți exportul JSON.'; }
+}
+function restoreSheet() {
+  const raw = localStorage.getItem(sheetKey()); if (!raw) return;
+  const d = JSON.parse(raw); document.querySelectorAll('.sheetin').forEach(i => { if (d[i.dataset.k] !== undefined) i.value = d[i.dataset.k]; });
+}
+function exportSheet() {
+  const obj = { CODE, VERSION, N: cfg.n, data_ora: new Date().toISOString(), fisa: sheetData() };
+  save('SMMeH_L07_N' + pad2(cfg.n) + '_FISA.json', JSON.stringify(obj, null, 2), 'application/json');
+}
+function importSheet(file) {
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const o = JSON.parse(rd.result);
+      if (o.CODE !== CODE) throw new Error('fișierul nu este o fișă ' + CODE);
+      if (o.VERSION !== VERSION) throw new Error('versiune diferită (' + o.VERSION + ')');
+      if (o.N !== cfg.n) throw new Error('fișa este pentru N = ' + o.N + ', varianta curentă este N = ' + cfg.n);
+      if (!o.fisa || typeof o.fisa !== 'object') throw new Error('structură greșită');
+      document.querySelectorAll('.sheetin').forEach(i => { i.value = typeof o.fisa[i.dataset.k] === 'string' ? o.fisa[i.dataset.k] : ''; });
+      saveSheet(); $('sheetMsg').textContent = 'Fișa a fost importată.';
+    } catch (e) { $('sheetMsg').textContent = 'Import respins: ' + e.message + '.'; }
+  };
+  rd.readAsText(file);
+}
+
+// ===== EXPORT =====
+function save(name, text, type = 'text/plain;charset=utf-8') {
+  const a = document.createElement('a'), u = URL.createObjectURL(new Blob([text], { type }));
+  a.href = u; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+}
+function csv() {
+  const head = ['CODE', 'VERSION', 'N', 'data_ora', 'tip', 'Tpub_s', 'K_s', 't_s', 'topic', 'qos', 'retain', 'duplicat', 'seq', 'payload', 'octeti_publish', 'eveniment'];
+  const when = new Date().toISOString();
+  const base = [CODE, VERSION, cfg.n, when, 'SIMULARE', cfg.tpub, cfg.ka];
+  const rows = [head];
+  for (const r of S.allRows) rows.push([...base, fmt(r.t / 1000, 2), r.topic, r.qos, r.retain, r.dup, r.seq, r.payload, r.bytes, r.will ? 'TESTAMENT' : 'MESAJ MONITOR']);
+  for (const e of S.log) rows.push([...base, fmt(e.t / 1000, 2), '', '', '', '', '', '', '', e.text]);
+  save('SMMeH_L07_N' + pad2(cfg.n) + '_SIMULARE.csv',
+    '﻿' + rows.map(r => r.map(x => '"' + String(x).replaceAll('"', '""') + '"').join(';')).join('\r\n'), 'text/csv;charset=utf-8');
+}
+function firmwareText() {
+  return $('firmware').textContent.replace(/^\n/, '').replace('const uint8_t N = 7;', 'const uint8_t N = ' + cfg.n + ';');
+}
+
+// ===== EVENIMENTE =====
+$('variant').onclick = applyVariant;
+$('example').onclick = () => { $('index').value = N_EXEMPLU; applyVariant(); };
+$('play').onclick = () => { playing = !playing; lastFrame = 0; $('play').textContent = playing ? 'Pauză' : 'Continuă'; };
+$('stepSmall').onclick = () => { playing = false; $('play').textContent = 'Continuă'; runTo(S.t + 500); render(); };
+$('step').onclick = () => { playing = false; $('play').textContent = 'Continuă'; runTo(S.t + 5000); render(); };
+$('reset').onclick = reset;
+$('wifi').onclick = () => { cmdWifi(); render(); };
+$('power').onclick = () => { cmdPower(); render(); };
+$('reboot').onclick = () => { cmdReboot(); render(); };
+$('disc').onclick = () => { cmdDisc(); render(); };
+$('ackloss').onclick = () => { S.ackLossNext = true; logS('Următorul PUBACK va fi pierdut' + ($('qos').value === '0' ? ' (atenție: la QoS 0 nu există PUBACK).' : '.')); render(); };
+$('mon').onclick = () => { cmdMon(); render(); };
+$('alarm').onclick = () => { cmdAlarm(); render(); };
+$('filter').onchange = () => { cmdFilter(); render(); };
+$('qos').onchange = () => { logS('QoS la publicarea pulsului: ' + $('qos').value + '.'); render(); };
+$('retainPuls').onchange = () => { logS('RETAIN la puls: ' + ($('retainPuls').checked ? 'da' : 'nu') + '.'); render(); };
+$('csv').onclick = csv;
+$('print').onclick = () => window.print();
+$('cCalc').onclick = calcPub;
+$('cLast').onclick = () => {
+  const r = S.allRows.filter(x => x.topic === cfg.root + '/puls').pop();
+  if (!r) { $('cMsg').textContent = 'Monitorul nu a primit încă un PUBLISH de puls.'; return; }
+  $('cTopic').value = r.topic; $('cPayload').value = r.payload; $('cQos').value = $('qos').value; $('cRetain').checked = $('retainPuls').checked; calcPub();
+};
+$('fTest').onclick = testFilter;
+$('downloadFw').onclick = () => save('SMMeH_L07_Senzor_MQTT.ino', firmwareText());
+$('downloadSecrets').onclick = () => save('secrets.h', $('secrets').textContent.replace(/^\n/, ''));
+$('sheetJson').onclick = exportSheet;
+$('sheetImport').onchange = e => { if (e.target.files[0]) importSheet(e.target.files[0]); e.target.value = ''; };
+$('sheetClear').onclick = () => { document.querySelectorAll('.sheetin').forEach(i => { i.value = ''; }); saveSheet(); };
+window.addEventListener('resize', render);
+
+function frame(now) {
+  if (playing) {
+    if (lastFrame) {
+      const dt = Math.min(now - lastFrame, 200) * Number($('speed').value);
+      acc += dt;
+      if (acc >= DT) { runTo(S.t + Math.floor(acc / DT) * DT); acc %= DT; render(); }
+    }
+    lastFrame = now;
+  } else { lastFrame = 0; acc = 0; }
+  requestAnimationFrame(frame);
+}
+
+applyVariant();
+calcPub();
+testFilter();
+requestAnimationFrame(frame);
+window.SMMeH = { variant, pubParts, topicMatch, simulateScenario, state: () => S, config: () => cfg, runTo, step, cmd: { cmdWifi, cmdPower, cmdReboot, cmdDisc, cmdMon, cmdAlarm, cmdFilter } };
+</script>
+</main>
+
+<div id="licenta-cc-by-nc-nd" style="clear:both;margin:24px auto 12px;padding:8px 12px;max-width:1100px;font:12px/1.5 system-ui,Arial,sans-serif;color:#666;text-align:center;opacity:.9">© 2026 Florin-Ciprian Argatu · UPB · FIE · DMAECS · Licență <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" rel="license" style="color:inherit">CC BY-NC-ND 4.0</a> · Utilizare necomercială, fără versiuni modificate, cu citarea autorului.</div>
+</body>
+</html>
